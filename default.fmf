@@ -1,0 +1,4 @@
+game game
+name "Entity Editor Template"
+basegame game
+disablehomedir 1

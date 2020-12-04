@@ -1,0 +1,12 @@
+../csprogs.dat
+cl_defs.qc
+sh_customdefs.qc
+cl_customdefs.qc
+sui_sys.qc
+cl_menu.qc
+cl_effects.qc
+cl_player.qc
+cl_hud.qc
+sh_editor.qc
+cl_editor.qc
+cl_main.qc
