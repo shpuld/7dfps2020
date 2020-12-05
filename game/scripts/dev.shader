@@ -158,13 +158,47 @@ textures/dev/test_sky
 	qer_editorimage textures/dev/edsky.tga
 
 	q3map_globaltexture
-	q3map_lightsubdivide 256
-	q3map_surfaceLight 120
-	q3map_sun 0.7 0.6 0.8 550 60 45
+	q3map_sun 0.9 0.8 0.7 85 80 80
 	
 	surfaceparm sky
 	surfaceparm noimpact
 	surfaceparm nolightmap
 	surfaceparm nomarks
+	surfaceparm nodraw
 	skyparms textures/tropical/sky - -
+}
+
+textures/dev/ground
+{
+	{
+		map $linear:textures/dev/terrain_gradient.tga
+		tcGen vector ( 0 0 1 ) ( 0 0 0.001 )
+		tcMod transform 0.01 -0.003 0.01 -0.01 1 -0.5
+	}
+	{
+		map $lightmap
+		blendFunc GL_DST_COLOR GL_ZERO
+		rgbGen identity
+	}
+	{
+		map $nearest:textures/dev/ground.tga
+		rgbGen identity
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+}
+
+textures/dev/ground2
+{
+	{
+		map $linear:textures/dev/terrain_gradient.tga
+		tcGen vector ( 0 0 1 ) ( 0 0 0.001 )
+		tcMod transform 0.01 -0.003 0.01 -0.01 1 -0.5
+		rgbGen constant 1.8 1.55 1.45
+		blendFunc blend
+	}
+	{
+	 	map $nearest:textures/dev/ground.tga
+		rgbGen identity
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
 }

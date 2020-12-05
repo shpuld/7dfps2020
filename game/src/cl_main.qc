@@ -8,6 +8,8 @@ void() CSQC_Shutdown =
 {
 };
 
+entity skybox;
+
 noref void(float apiver, string enginename, float enginever) CSQC_Init =
 {
 	precache_everything();
@@ -20,6 +22,8 @@ noref void(float apiver, string enginename, float enginever) CSQC_Init =
 	registercvar("cl_hud", "1");
 	registercvar("cl_hud_timer", "0");
 	registercommand("noclip");
+	skybox = spawn();
+	setmodel(skybox, "models/skybox.iqm");
 };
 
 noref void() CSQC_WorldLoaded =
@@ -51,6 +55,10 @@ void(float width, float height, float menushown) CSQC_UpdateView =
 	setproperty(VF_ANGLES, camang);
 	setproperty(VF_ORIGIN, campos);
 	
+	addentity(skybox);
+	renderscene();
+	
+	clearscene();
 	//autoadd entities received from servers for drawing
 	addentities(MASK_ENGINE);
 

@@ -47,7 +47,9 @@ void(float amount, vector dir, entity dealer) player_die =
 
 void() player_attack =
 {
-
+	traceline(self.origin + self.view_ofs, self.origin + self.view_ofs + v_forward * 1500, 0, self);
+	printf("Hit: %s, %f, %f\n", etos(trace_ent), trace_startsolid, (float)trace_endcontents);
+	printf("point contents %f\n", pointcontents(self.origin - '0 0 50'));
 }
 
 
@@ -133,8 +135,8 @@ void() PlayerSpawn =
 	setorigin(self, get_spawn_point());
 	self.angles = find(world, classname, "info_player_start").angles;
 	self.fixangle = TRUE;
-	setsize(self, [-12, -12, 0], [12, 12, 56]);
-	self.view_ofs = [0, 0, 48];
+	setsize(self, [-16, -16, 0], [16, 16, 64]);
+	self.view_ofs = [0, 0, 52];
 	self.hurt = player_hurt;
 	self.die = player_die;
 	self.takes_damage = TRUE;
