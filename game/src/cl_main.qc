@@ -24,6 +24,7 @@ noref void(float apiver, string enginename, float enginever) CSQC_Init =
 	registercommand("noclip");
 	skybox = spawn();
 	setmodel(skybox, "models/skybox.iqm");
+	// skybox.scale = 2;
 };
 
 noref void() CSQC_WorldLoaded =
