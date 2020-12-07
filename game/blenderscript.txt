@@ -1,0 +1,22 @@
+import bpy
+from bpy.props import (
+        BoolProperty,
+        FloatProperty,
+        StringProperty,
+        EnumProperty,
+        )
+from bpy_extras.io_utils import (
+        ImportHelper,
+        ExportHelper,
+        orientation_helper_factory,
+        path_reference_mode,
+        axis_conversion,
+        )
+
+def export_all_obj():
+    objects = bpy.data.objects
+    for object in objects:
+        bpy.ops.object.select_all(action='DESELECT')
+        object.select = True
+        exportName = "E:\\7dfps2020\\game\\models\\auto\\" + object.name + '.obj'
+        bpy.ops.export_scene.obj(filepath=exportName, use_selection=True, global_scale=32)

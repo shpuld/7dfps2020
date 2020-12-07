@@ -1,0 +1,10 @@
+0 1 1 0
+1 6 5 1 // alert idle
+8 6 20 0 // shoot
+15 22 3 1 // normal idle
+38 16 20 1 // run
+55 16 13 1 // normal walk
+72 16 13 1 // alert walk
+89 21 12 0 // stagger
+111 11 12 0 // hurt
+123 27 15 0 // die

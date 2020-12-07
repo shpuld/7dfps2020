@@ -47,9 +47,8 @@ void(float amount, vector dir, entity dealer) player_die =
 
 void() player_attack =
 {
-	traceline(self.origin + self.view_ofs, self.origin + self.view_ofs + v_forward * 1500, 0, self);
-	printf("Hit: %s, %f, %f\n", etos(trace_ent), trace_startsolid, (float)trace_endcontents);
-	printf("point contents %f\n", pointcontents(self.origin - '0 0 50'));
+	traceline(self.origin + self.view_ofs, self.origin + self.view_ofs + v_forward * 2500, 0, self);
+	printf("hit at %v\n", trace_endpos);
 }
 
 
@@ -129,7 +128,7 @@ void() PlayerSpawn =
 {
 	self.classname = "player";
 	self.solid = SOLID_SLIDEBOX;
-	setmodel(self, "models/testplayer.iqm");
+	setmodel(self, "models/alien.iqm");
 	self.movetype = MOVETYPE_WALK;
 	self.health = 3;
 	setorigin(self, get_spawn_point());

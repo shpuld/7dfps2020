@@ -164,12 +164,12 @@ textures/dev/test_sky
 	surfaceparm noimpact
 	surfaceparm nolightmap
 	surfaceparm nomarks
-	skyparms textures/tropical/sky - -
+	// skyparms textures/tropical/sky - -
 	
-	surfaceparm nodraw
+	// surfaceparm nodraw
 }
 
-textures/dev/ground
+textures/dev/groundq3
 {
 	{
 		map $linear:textures/dev/terrain_gradient.tga
@@ -188,14 +188,13 @@ textures/dev/ground
 	}
 }
 
-textures/dev/ground2
+textures/dev/ground23
 {
 	{
 		map $linear:textures/dev/terrain_gradient.tga
 		tcGen vector ( 0 0 1 ) ( 0 0 0.001 )
 		tcMod transform 0.01 -0.003 0.01 -0.01 1 -0.5
 		rgbGen constant 1.62 1.55 1.45
-		blendFunc blend
 	}
 	{
 	 	map $nearest:textures/dev/ground.tga
@@ -206,6 +205,32 @@ textures/dev/ground2
 		map $whitetexture
 		rgbGen vertex
 		blendFunc add
+	}
+}
+
+textures/dev/ground2
+{
+	{
+		program glsl/ground.glsl#vertexlit
+		map $nearest:textures/dev/ground.tga
+		map $linear:textures/dev/terrain_gradient.tga
+	}
+}
+
+textures/dev/ground
+{
+	{
+		program glsl/ground.glsl
+		map $nearest:textures/dev/ground.tga
+		map $linear:textures/dev/terrain_gradient.tga
+	}
+}
+
+textures/dev/ground2
+{
+	{
+	 	map $nearest:textures/dev/ground.tga
+		rgbGen entity
 	}
 }
 
