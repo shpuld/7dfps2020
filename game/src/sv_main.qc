@@ -51,7 +51,7 @@ float() try_place_bmodel =
 	float width = rint((self.absmax_x - self.absmin_x) / BLOCK_SIZE);
 	float height = rint((self.absmax_y - self.absmin_y) / BLOCK_SIZE);
 	
-	printf("Placing %s with size %f %f\n", self.targetname, width, height);
+	// printf("Placing %s with size %f %f\n", self.targetname, width, height);
 	
 	entity point = find(world, classname, "info_notnull");
 	float initial_angle = floor(random()*4) * 90;
@@ -100,7 +100,9 @@ float() try_place_bmodel =
 		}
 	}
 	
-	print("Could not place model\n");
+	// print("Could not place model\n");
+	self.solid = SOLID_NOT;
+	self.modelindex = 0;
 	return FALSE;
 }
 
@@ -129,8 +131,57 @@ void() func_plat =
 	float width = rint((self.absmax_x - self.absmin_x) / BLOCK_SIZE);
 	float height = rint((self.absmax_y - self.absmin_y) / BLOCK_SIZE);
 
-	self.nextthink = time + 0.5 + max(0, 2 - width*height*0.1);
+	self.nextthink = time + 0.1 + max(0, 1.6 - width*height*0.1) + random() * 0.5;
 	self.think = func_plat_init;
+}
+
+void() func_fallback_init =
+{
+	entity point = find(world, classname, "info_notnull");
+	// set_bmodel_angles(self, [0, initial_angle]);
+	
+	for (float x = 0; x < WORLD_SIZE.x; x++)
+	{
+		for (float y = 0; y < WORLD_SIZE.y; y++)
+		{
+			vector world_pos = point.origin + [x, y] * BLOCK_SIZE;
+			traceline(world_pos + '0 0 512', world_pos - '0 0 128', MOVE_NORMAL, point);
+			if (trace_ent == world || trace_fraction == 1)
+			{
+				// printf("filling empty spot at %f %f\n", x, y);
+				entity clone = spawn();
+				float ang = floor(random()*4) * 90;
+				clone.org_point = self.org_point;
+				setmodel(clone, self.model);
+				clone.solid = SOLID_BSP;
+				set_bmodel_angles(clone, [0, ang]);
+				set_bmodel_org(clone, world_pos);
+			}
+		}
+	}
+	
+	self.modelindex = 0;
+}
+
+void() func_fallback =
+{
+	setmodel(self, self.model);
+	self.solid = SOLID_BSP;
+	
+	entity point = find(world, targetname, strcat("org", self.targetname));
+
+	if (!point)
+	{
+		vector dividedmin = self.absmin / BLOCK_SIZE;
+		self.org_point = [ceil(dividedmin_x), ceil(dividedmin_y), ceil(dividedmin_z)] * BLOCK_SIZE;
+	}
+	else
+	{
+		self.org_point = point.origin;
+	}
+	
+	self.nextthink = time + 2.2;
+	self.think = func_fallback_init;
 }
 
 void() info_null =

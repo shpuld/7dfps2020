@@ -134,6 +134,7 @@ void() PlayerSpawn =
 	self.health = 3;
 	setorigin(self, get_spawn_point());
 	self.angles = find(world, classname, "info_player_start").angles;
+	self.angles_x = 24;
 	self.fixangle = TRUE;
 	setsize(self, [-16, -16, 0], [16, 16, 64]);
 	self.view_ofs = [0, 0, 52];
@@ -141,6 +142,7 @@ void() PlayerSpawn =
 	self.die = player_die;
 	self.takes_damage = TRUE;
 	self.dead = FALSE;
+	droptofloor();
 	player_normal();
 };
 

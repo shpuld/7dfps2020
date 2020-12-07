@@ -166,7 +166,7 @@ textures/dev/test_sky
 	surfaceparm nomarks
 	skyparms textures/tropical/sky - -
 	
-	// surfaceparm nodraw
+	surfaceparm nodraw
 }
 
 textures/dev/ground
