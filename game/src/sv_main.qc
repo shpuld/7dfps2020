@@ -16,7 +16,9 @@ void() worldspawn =
 
 	editor_load_ents("default");
 	editor_play();
-
+	
+	clientstat(STAT_AIMING, EV_FLOAT, aiming);
+	clientstat(STAT_AIM_PENALTY, EV_FLOAT, aim_penalty);
 }
 
 void() SpectatorConnect =

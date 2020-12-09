@@ -14,6 +14,11 @@ const float FL_JUMPRELEASED = 4096;
 
 .float mouse2released;
 
+.float aiming;
+.float aim_value;
+.float aim_penalty;
+.float crouching;
+
 
 void() sub_remove =
 {

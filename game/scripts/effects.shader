@@ -30,6 +30,17 @@ adot
 	}
 }
 
+adotadd
+{
+	{
+		map particles/dot.tga
+		alphagen vertex
+		rgbGen vertex
+		alphafunc GE128
+		blendFunc GL_ONE GL_ONE
+	}
+}
+
 dotdecal
 {
     sort 6

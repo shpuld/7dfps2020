@@ -234,9 +234,57 @@ textures/dev/ground2
 	}
 }
 
+alien
+{
+	{
+		program glsl/defaultskin2.glsl
+		map $nearest:models/alien.png
+		rgbGen lightingDiffuse
+	}
+}
+
+ak
+{
+	{
+		program glsl/defaultskin2.glsl
+		map $nearest:models/ak.png
+	}
+}
+
+
 skysky
 {
 	{
 		map $nearest:textures/dev/skysky.tga
+	}
+}
+
+crosshair
+{
+	// cull disable
+	{
+		map $whitetexture
+		rgbGen vertex
+		alphaGen vertex
+		blendFunc blend
+		// nodepthtest
+	}
+}
+
+bullet
+{
+	{
+		map models/bullet
+		blendFunc add
+	}
+}
+
+ak_mzl
+{
+	{
+		map $nearest:models/ak_mzl
+		blendFunc add
+		rgbGen entity
+		alphaGen entity
 	}
 }

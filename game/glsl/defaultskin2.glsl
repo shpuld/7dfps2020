@@ -70,8 +70,8 @@ varying vec3 normal;
 
 void main ()
 {
-	light.rgba = vec4(e_light_ambient, 1.0);
-	light.rgb = max(vec3(0.35), light.rgb);
+	light.rgba = vec4(e_light_ambient, 1.0f) * 3.5f;
+	light.rgb = max(vec3(0.15f), light.rgb);
 
 #ifdef NONORMALS
 	vec3 n, w;
@@ -83,13 +83,7 @@ void main ()
 	n = normalize(n);
 	s = normalize(s);
 	t = normalize(t);
-	#ifndef PBR
-		light.rgb += e_light_mul;
-		if (length(e_light_mul) <= 0.0)
-			light.rgb += vec3(0.45, 0.43, 0.42);
-	#else
-		light.rgb = vec3(1.0);
-	#endif
+	light.rgb += e_light_mul * 0.5f;
 #endif
 
 #if defined(PBR)
