@@ -19,6 +19,8 @@ void() worldspawn =
 	
 	clientstat(STAT_AIMING, EV_FLOAT, aiming);
 	clientstat(STAT_AIM_PENALTY, EV_FLOAT, aim_penalty);
+	clientstat(STAT_CHAMBERED, EV_FLOAT, chambered);
+	clientstat(STAT_MAGAZINE, EV_FLOAT, magazine);
 }
 
 void() SpectatorConnect =

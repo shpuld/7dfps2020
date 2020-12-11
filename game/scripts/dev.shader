@@ -251,6 +251,14 @@ ak
 	}
 }
 
+mp5
+{
+	{
+		program glsl/defaultskin2.glsl
+		map $nearest:models/mp5.png
+	}
+}
+
 
 skysky
 {
@@ -279,10 +287,29 @@ bullet
 	}
 }
 
+alienbullet
+{
+	{
+		map models/alienbullet
+		blendFunc add
+	}
+}
+
+
 ak_mzl
 {
 	{
 		map $nearest:models/ak_mzl
+		blendFunc add
+		rgbGen entity
+		alphaGen entity
+	}
+}
+
+mp5_mzl
+{
+	{
+		map $nearest:models/mp5_mzl
 		blendFunc add
 		rgbGen entity
 		alphaGen entity

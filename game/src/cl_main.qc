@@ -23,6 +23,7 @@ float aiming_lerp;
 vector recoil;
 float current_fov;
 vector recoil_pos;
+float gunchange_time;
 
 void() viewmodel_update =
 {
@@ -31,7 +32,7 @@ void() viewmodel_update =
 
 	vmodel_time += frametime;
 
-	vector baseoffset = '9 -3 -2.75';
+	vector baseoffset = '10 -2.5 -2.25';
 	self.origin = baseoffset;
 
 	vector idleoffset = [0, sin(vmodel_time * 1.25) * 0.25, cos(vmodel_time * 1.75) * 0.25];
@@ -54,8 +55,8 @@ void() viewmodel_update =
 
 	self.origin += angle_sway;
 	
-	float posdiff = vlen([prev_pos.x, prev_pos.y] - [campos.x, campos.y]) * frametime * 4;
-	vmodel_walktime += posdiff;
+	float posdiff = vlen([prev_pos.x, prev_pos.y] - [campos.x, campos.y]);
+	vmodel_walktime += posdiff * 0.03;
 	vector walkoffset = 0.25 * [0, cos(vmodel_walktime * 1), -sin(vmodel_walktime * 2)]; 
 
 	self.origin += walkoffset;
@@ -83,9 +84,20 @@ void() viewmodel_update =
 	current_fov = normalfov - aiming_lerp * 30;
 
 	self.origin -= (baseoffset + '-3 0 0') * 0.6 * aiming_lerp;
-	self.origin -= angle_sway * 0.8 * aiming_lerp;
+	self.origin -= angle_sway * 0.7 * aiming_lerp;
 	self.origin -= idleoffset * 0.5 * aiming_lerp;
-	self.origin -= walkoffset * 0.6 * aiming_lerp;
+	self.origin -= walkoffset * 0.4 * aiming_lerp;
+	
+	if (gunchange_time > 0)
+	{
+		vector offhand_offset = '-5 0 -14';
+		vector offhand_angles = '50 60 -90';
+		
+		self.origin += offhand_offset * gunchange_time * gunchange_time;
+		self.angles += offhand_angles * gunchange_time * gunchange_time;
+		
+		gunchange_time -= frametime;
+	}
 	
 	self.frame1time += frametime;
 	
@@ -149,9 +161,9 @@ noref void(float apiver, string enginename, float enginever) CSQC_Init =
 	// skybox.scale = 2;
 	
 	viewmodel = spawn();
-	setmodel(viewmodel, "models/ak.iqm");
+	// setmodel(viewmodel, "models/mp5.iqm");
 	viewmodel_mzl = spawn();
-	setmodel(viewmodel_mzl, "models/ak_mzl.iqm");
+	// setmodel(viewmodel_mzl, "models/mp5_mzl.iqm");
 	// viewmodel.drawmask = MASK_ENGINE;
 	viewmodel.renderflags = RF_VIEWMODEL;
 	viewmodel_mzl.renderflags = RF_VIEWMODEL;
@@ -202,7 +214,6 @@ void(float width, float height, float menushown) CSQC_UpdateView =
 	if (viewmodel_mzl.alpha > 0)
 	{
 		addentity(viewmodel_mzl);
-		viewmodel_mzl.alpha -= frametime * 35;
 		viewmodel_mzl.colormod = [viewmodel_mzl.alpha * 1.25, viewmodel_mzl.alpha * 1.25, viewmodel_mzl.alpha * 1.25];
 		viewmodel_mzl.origin = viewmodel.origin;
 		viewmodel_mzl.angles = viewmodel.angles;
@@ -210,6 +221,8 @@ void(float width, float height, float menushown) CSQC_UpdateView =
 		viewmodel_mzl.frame1time += 0.5;
 		addentity(viewmodel_mzl);
 		viewmodel_mzl.frame1time -= 0.5;
+		
+		viewmodel_mzl.alpha -= frametime * 35;
 	}
 
 	draw_crosshair();
@@ -313,6 +326,13 @@ void() CSQC_Parse_Event =
 		case EVENT_CHARGE:
 			viewmodel.frame = 4;
 			viewmodel.frame1time = 0;
+			break;
+		case EVENT_SETGUN:
+			float guntype = readbyte();
+			setmodel(viewmodel, get_gun_model(guntype));
+			setmodel(viewmodel_mzl, get_muzzleflash_model(guntype));
+			viewmodel.frame = 0;
+			gunchange_time = 0.6;
 			break;
 		default:
 			printf("No action for byte %f\n", first);

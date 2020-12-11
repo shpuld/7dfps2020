@@ -5,10 +5,105 @@
 const float STAT_AIMING = 50;
 const float STAT_AIM_PENALTY = 51;
 const float STAT_CROUCHING = 52;
+const float STAT_CHAMBERED = 53;
+const float STAT_MAGAZINE = 54;
 
 const float EVENT_RECOIL = 1;
 const float EVENT_RELOAD = 2;
 const float EVENT_CHARGE = 3;
+const float EVENT_SETGUN = 4;
+
+
+
+const float WEP_PISTOL = 1;
+const float WEP_AK = 2;
+const float WEP_MP5 = 3;
+const float WEP_RIFLE = 4;
+
+float(float type) get_aim_inaccuracy =
+{
+	switch (type)
+	{
+	case WEP_PISTOL: return 0.15;
+	case WEP_AK: return 0.08;
+	case WEP_MP5: return 0.1;
+	case WEP_RIFLE: return 0.03;
+	default: return 0;
+	}
+}
+
+float(float type) get_hip_inaccuracy =
+{
+	switch (type)
+	{
+	case WEP_PISTOL: return 0.25;
+	case WEP_AK: return 0.2;
+	case WEP_MP5: return 0.25;
+	case WEP_RIFLE: return 0.1;
+	default: return 0;
+	}
+}
+
+float(float type) get_recoil =
+{
+	switch (type)
+	{
+	case WEP_PISTOL: return 0.3;
+	case WEP_AK: return 0.3;
+	case WEP_MP5: return 0.18;
+	case WEP_RIFLE: return 0.4;
+	default: return 0;
+	}
+}
+
+float(float type) get_fire_delay =
+{
+	switch (type)
+	{
+	case WEP_PISTOL: return 0.2;
+	case WEP_AK: return 0.1;
+	case WEP_MP5: return 0.0666;
+	case WEP_RIFLE: return 0.3;
+	default: return 0;
+	}
+}
+
+string(float type) get_fire_sound =
+{
+	switch (type)
+	{
+	case WEP_PISTOL: return "sound/FireX.wav";
+	case WEP_AK: return "sound/FireX.wav";
+	case WEP_MP5: return "sound/mp5.wav";
+	case WEP_RIFLE: return "sound/FireX.wav";
+	default: return "";
+	}
+}
+
+string(float type) get_gun_model =
+{
+	switch (type)
+	{
+	case WEP_PISTOL: return "models/ak.iqm";
+	case WEP_AK: return "models/ak.iqm";
+	case WEP_MP5: return "models/mp5.iqm";
+	case WEP_RIFLE: return "models/ak.iqm";
+	default: return "models/ak.iqm";
+	}
+}
+
+string(float type) get_muzzleflash_model =
+{
+	switch (type)
+	{
+	// case WEP_PISTOL: return "models/ak.iqm";
+	case WEP_AK: return "models/ak_mzl.iqm";
+	case WEP_MP5: return "models/mp5_mzl.iqm";
+	// case WEP_RIFLE: return "models/ak.iqm";
+	default: return "models/ak_mzl.iqm";
+	}
+}
+
 
 float() srandom = { return 2*random() - 1; }
 
@@ -16,6 +111,7 @@ void() precache_everything =
 {
 	precache_sound("demon/dland2.wav");
 	precache_sound("sound/FireX.wav");
+	precache_sound("sound/mp5.wav");
 	precache_sound("sound/ak_charge.wav");
 	precache_sound("sound/ak_reload.wav");
 	precache_sound("sound/rico1.wav");
@@ -26,9 +122,12 @@ void() precache_everything =
 	precache_model("models/alien.iqm");
 	precache_model("models/barrel.iqm");
 	precache_model("models/skybox.iqm");
+	precache_model("models/bullet.iqm");
+	precache_model("models/alienbullet.iqm");
 	precache_model("models/ak.iqm");
 	precache_model("models/ak_mzl.iqm");
-	precache_model("models/bullet.iqm");
+	precache_model("models/mp5.iqm");
+	precache_model("models/mp5_mzl.iqm");
 };
 
 float(float a, float b, float amount) turn_angle =

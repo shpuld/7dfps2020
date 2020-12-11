@@ -3,6 +3,32 @@
 //	Player.qc - Various stuff done for the player, including per-frame functions like PlayerPreThink and PlayerPostThink, also client specific stuff like PutClientInServer etc.
 //
 
+void() fill_magazine =
+{
+	self.magazine = 30;
+}
+
+void(float type) set_gun_type =
+{
+	if (time < self.attack_finished) return;
+
+	self.weapontype = type;
+	self.attack_finished = time + 0.6;
+	BeginEvent(EVENT_SETGUN);
+	MulticastByte(type);
+	msg_entity = self;
+	multicast('0 0 0', MULTICAST_ONE_R);
+	self.aim_penalty = 1.25;
+}
+
+void(entity gun) set_gun =
+{
+	if (time < self.attack_finished) return;
+	
+	set_gun_type(gun.weapontype);
+	self.magazine = gun.magazine;
+	self.chambered = gun.chambered;
+}
 
 void() CheckImpulses =
 {
@@ -16,7 +42,17 @@ void() CheckImpulses =
 		alien_minor();
 		self = oldself;
 		break;
+	case 2:
+		set_gun_type(WEP_MP5);
+		break;
+	case 3:
+		set_gun_type(WEP_AK);
+		break;
 	case 10:
+		if (time < self.attack_finished) return;
+		self.nextthink = time + 2.6;
+		self.think = fill_magazine;
+		self.attack_finished = time + 2.6;
 		BeginEvent(EVENT_RELOAD);
 		msg_entity = self;
 		multicast('0 0 0', MULTICAST_ONE);
@@ -95,13 +131,22 @@ void() bullet_touch =
 		// self.velocity = trace_plane_normal * 600;
 		nb.angles = vectoangles(nb.velocity);
 		nb.origin += trace_plane_normal * 8;
-		sound_variation(nb, CHAN_AUTO, "sound/rico%.0f.wav", 3, 0.7 + random() * 0.3, 0.8);
+		sound_variation(nb, CHAN_AUTO, "sound/rico%.0f.wav", 3, 0.9 + random() * 0.3, 0.7);
 	}
 	else
 	{
 		sound(self, CHAN_AUTO, "sound/bullethit.wav", 0.2 + random() * 0.5, 1.3, 90 + random() * 25);
 	}
-	if (other.takes_damage) damage(other, 50, self.velocity, self.owner);
+	if (other.takes_damage)
+	{
+		float dmg_multi = 1;
+		float from_bottom = self.origin_z - other.absmin_z;
+		float ratio = from_bottom / (other.absmax_z - other.absmin_z);
+		if (ratio > 0.88) dmg_multi = 2.0;
+		if (ratio < 0.5) dmg_multi = 0.5;
+		printf("ratio %f, multiplier %f\n", ratio, dmg_multi);
+		damage(other, (22 + random() * 35) * dmg_multi, self.velocity, self.owner);
+	}
 	pointparticles(particleeffectnum("weapons.bullet_impact"), self.origin + trace_plane_normal * 4, trace_plane_normal);
 	remove(self);
 	// printf("hit something %s\n", etos(other));
@@ -141,17 +186,21 @@ void() player_attack =
 	traceline(bl.origin, bl.origin + normalize(bl.velocity) * (32 + random() * 64), 0, bl);
 	setorigin(bl, bl.origin + 0.9 * (trace_endpos - bl.origin));
 	
-	sound(self, CHAN_AUTO, "sound/FireX.wav", 1, 0.5, 90 + random() * 6);
+	sound(self, CHAN_AUTO, get_fire_sound(self.weapontype), 1, 0.5, 90 + random() * 6);
 	
-	self.recoil += 0.3;
+	float recoil_amount = get_recoil(self.weapontype);
+	// AK
+	// self.recoil += 0.3;
+	// MP5
+	self.recoil += recoil_amount;
 	
 	BeginEvent(EVENT_RECOIL);
-	MulticastByte(0.3 * 255);
+	MulticastByte(recoil_amount * 255);
 	msg_entity = self;
 	multicast('0 0 0', MULTICAST_ONE);
 	
 	if (self.recoil > 1) self.recoil = 1;
-	self.attack_finished = time + 0.1;
+	self.attack_finished = time + get_fire_delay(self.weapontype);
 }
 
 
@@ -169,6 +218,11 @@ void() PlayerJump =
 	player_jump();
 };
 
+void() finish_chambering =
+{
+	self.chambered = TRUE;
+	self.magazine -= 1;
+}
 
 void() PlayerPreThink =
 {	
@@ -181,11 +235,32 @@ void() PlayerPreThink =
 	}
 		
 	// Attack
-	if (self.button0)
+	if (time > self.attack_finished)
 	{
-		if (time > self.attack_finished)
+		if (!self.chambered)
+		{
+			if (self.magazine > 0)
+			{
+				// Do the proper charging animation here
+				BeginEvent(EVENT_CHARGE);
+				msg_entity = self;
+				multicast('0 0 0', MULTICAST_ONE);
+				sound(self, CHAN_AUTO, "sound/ak_charge.wav", 0.8, 1, 95 + random() * 5);
+				self.attack_finished = time + 0.6;
+				self.nextthink = time + 0.5;
+				self.think = finish_chambering;
+			}
+		}
+		if (self.button0 && self.chambered)
 		{
 			player_attack();
+			self.chambered = FALSE;
+			
+			if (self.magazine > 0)
+			{
+				self.chambered = TRUE;
+				self.magazine -= 1;
+			}
 		}
 	}
 	
@@ -239,7 +314,7 @@ void() PlayerSpawn =
 	self.solid = SOLID_SLIDEBOX;
 	setmodel(self, "models/alien.iqm");
 	self.movetype = MOVETYPE_WALK;
-	self.health = 3;
+	self.health = 100;
 	setorigin(self, get_spawn_point());
 	self.angles = find(world, classname, "info_player_start").angles;
 	self.angles_x = 24;
@@ -250,6 +325,9 @@ void() PlayerSpawn =
 	self.die = player_die;
 	self.takes_damage = TRUE;
 	self.dead = FALSE;
+	// self.weapontype = WEP_MP5;
+	set_gun_type(WEP_AK);
+	self.magazine = 30;
 	droptofloor();
 	player_normal();
 };
@@ -302,9 +380,11 @@ void(string command_string) SV_ParseClientCommand =
 
 
 void() SV_RunClientCommand =
-{		
+{
 	if (self.dead)
 		input_movevalues *= 0;
+		
+	float weaptype = self.weapontype;
 		
 	if (self.aiming) input_movevalues *= 0.6;
 	
@@ -334,11 +414,11 @@ void() SV_RunClientCommand =
 	vector hvel = [self.velocity_x, self.velocity_y];
 	vector proposed_velocity = self.velocity + (input_movevalues_x * v_forward + input_movevalues_y * v_right) * input_timelength * 1.5;
 	
-	if (vlen([proposed_velocity_x, proposed_velocity_y]) < 320)
+	if (vlen([proposed_velocity_x, proposed_velocity_y]) < 240)
 		self.velocity = proposed_velocity;
 		
-	float target_penalty = self.aiming ? 0.05 : 0.2;
-	if (!crouching) target_penalty += 0.03;
+	float target_penalty = self.aiming ? get_aim_inaccuracy(weaptype) : get_hip_inaccuracy(weaptype);
+	if (!crouching) target_penalty += 0.05;
 	target_penalty += min(1.4, vlen(self.velocity) / 320);
 	
 	if (self.recoil > 0)

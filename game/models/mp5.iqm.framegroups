@@ -1,0 +1,5 @@
+0 1 1 0 // idle
+1 1 1 0 // onground
+2 11 30 0 // shoot
+13 30 12 0 // reload
+42 16 22 0 // charge

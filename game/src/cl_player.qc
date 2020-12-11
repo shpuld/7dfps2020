@@ -8,7 +8,7 @@ void() player_shoot =
 void() CSQC_Input_Frame =
 {
 	if (input_impulse) cheats_used = TRUE;
-	float maxspeed = 230;
+	float maxspeed = 210;
 	if (vlen(input_movevalues) > maxspeed)
 		input_movevalues = normalize(input_movevalues) * maxspeed;
 	/*

@@ -19,6 +19,14 @@ const float FL_JUMPRELEASED = 4096;
 .float aim_penalty;
 .float crouching;
 
+.float chambered;
+.float magazine;
+.float reserve;
+.entity primary;
+.entity secondary;
+.float weapontype;
+
+
 
 void() sub_remove =
 {
