@@ -143,6 +143,14 @@ float(float type) get_reserve =
 }
 
 
+struct soldier {
+	float namei;
+	float speed;
+	float accuracy;
+	float weapontype;
+	float vitality;
+};
+
 
 float() srandom = { return 2*random() - 1; }
 

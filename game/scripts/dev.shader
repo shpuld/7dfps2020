@@ -323,3 +323,12 @@ mp5_mzl
 		alphaGen entity
 	}
 }
+
+textures/heart
+{
+	{
+		map $nearest:textures/heart
+		alphafunc GE128
+		blendfunc blend
+	}
+}

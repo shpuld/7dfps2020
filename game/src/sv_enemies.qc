@@ -363,12 +363,12 @@ void(float amount, vector dir, entity dealer) enemy_hurt =
 	if (stagger)
 	{
 		self.frame = ANIM_STAGGER;
-		self.nextthink = time + 1.5;
+		self.nextthink = time + 1.4;
 	}
 	else
 	{
 		self.frame = ANIM_HURT;
-		self.nextthink = time + 0.9;
+		self.nextthink = time + 0.75;
 	}
 	self.think = enemy_think;
 	spot_enemy(self, dealer);

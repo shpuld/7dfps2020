@@ -4,6 +4,7 @@ void(entity viewmodel, float zoom) draw_hud =
 	makevectors(camang);
 	vector hudsize = [42 * 4 + 8, 28];
 	vector basepos = project(campos + v_forward * (viewmodel.origin.x + 2 + zoom * 12) - v_right * viewmodel.origin.y + v_up * (viewmodel.origin.z - 4 + zoom * 6)) - [hudsize.x, 0];
+	basepos = [floor(basepos.x*2)/2, floor(basepos.y*2)/2];
 	// vector basepos = [8, g_height - 8 - hudsize.y];
 	drawfill(basepos, hudsize, '0 0 0', 0.6);
 	
@@ -11,7 +12,8 @@ void(entity viewmodel, float zoom) draw_hud =
 	float frac = hp / 100;
 	
 	drawfill([basepos.x + 4, basepos.y + 4], [(hudsize.x - 8) * frac, 8], '1 1 1', 0.3);
-	string hpstr = sprintf("+%.0f", hp);
+	string hpstr = sprintf("%3.0f", hp);
+	drawpic([basepos.x + hudsize.x - strlen(hpstr) * 8 - 12, basepos.y + 4], "textures/heart", [8, 8], '1 1 1', 1, 0);
 	drawstring([basepos.x + hudsize.x - strlen(hpstr) * 8 - 4, basepos.y + 4], hpstr, [8, 8], '1 1 1', 1, 0);
 	
 	float mag = getstatf(STAT_MAGAZINE);
