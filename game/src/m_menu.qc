@@ -1,3 +1,4 @@
+
 vector MENU_BG = '0.2 0.3 0.4';
 vector MENU_BG_DARK = '0.1 0.15 0.2';
 vector MENU_BORDER = '0.3 0.4 0.5';
@@ -198,7 +199,7 @@ void() settings_menu =
 	
 	cvar_slider([xpos, ypos], [width, 32], [0, 1], "volume", "Volume", "%.2f");
 	ypos += 32 + 4;
-	cvar_slider([xpos, ypos], [width, 32], [0, 1], "musicvolume", "Music Volume", "%.2f");
+	cvar_slider([xpos, ypos], [width, 32], [0, 1], "musicvolumegame", "Music Volume", "%.2f");
 	ypos += 32 + 4 + 8;
 	
 	sui_text([xpos, ypos], MENU_TEXT_SMALL, "Video", MENU_TEXT_1, 1, 0);

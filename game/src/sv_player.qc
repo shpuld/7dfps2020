@@ -3,9 +3,11 @@
 //	Player.qc - Various stuff done for the player, including per-frame functions like PlayerPreThink and PlayerPostThink, also client specific stuff like PutClientInServer etc.
 //
 
+.float reloading;
+
 void(float type) set_gun_type =
 {
-	if (time < self.attack_finished) return;
+	if (time < self.attack_finished && !self.reloading) return;
 
 	self.weapontype = type;
 	self.attack_finished = time + 0.6;
@@ -26,7 +28,7 @@ void(entity tgt, entity src) copy_gun =
 
 void(entity gun) set_gun =
 {
-	if (time < self.attack_finished) return;
+	if (time < self.attack_finished && !self.reloading) return;
 	
 	copy_gun(self, gun);
 	set_gun_type(gun.weapontype);
@@ -46,6 +48,7 @@ void() fill_magazine =
 	float actual_fill = min(to_fill, self.reserve);
 	self.magazine += actual_fill;
 	self.reserve -= actual_fill;
+	self.reloading = FALSE;
 }
 
 void() reload_gun =
@@ -55,18 +58,19 @@ void() reload_gun =
 	if (self.magazine >= get_magazine(self.weapontype)) return;
 	if (self.dead) return;
 
-	self.nextthink = time + 2.6;
+	self.reloading = TRUE;
+	self.nextthink = time + get_reload_time(self.weapontype);
 	self.think = fill_magazine;
-	self.attack_finished = time + 2.6;
+	self.attack_finished = time + get_reload_time(self.weapontype);
 	BeginEvent(EVENT_RELOAD);
 	msg_entity = self;
 	multicast('0 0 0', MULTICAST_ONE);
-	sound(self, CHAN_AUTO, "sound/ak_reload.wav", 0.8, 1, 95 + random() * 5);
+	sound(self, CHAN_WEAPON, get_reload_sound(self.weapontype), 0.7, 1, 95 + random() * 15);
 }
 
 void() switch_gun =
 {
-	if (time < self.attack_finished) return;
+	if (time < self.attack_finished && !self.reloading) return;
 	if (self.dead) return;
 
 	if (self.using_primary)
@@ -81,6 +85,11 @@ void() switch_gun =
 		set_gun(self.primary);
 		self.using_primary = TRUE;
 	}
+	
+	sound(self, CHAN_WEAPON, "sound/switch.wav", 0.7, 1.2, 95 + random() * 5);
+	self.nextthink = 0;
+	self.think = sub_noop;
+	self.reloading = FALSE;
 }
 
 void() CheckImpulses =
@@ -156,6 +165,8 @@ void(float amount, vector dir, entity dealer) player_die =
 	self.movetype = MOVETYPE_TOSS;
 	self.dead = TRUE;
 	self.health = -1;
+	
+	sound(self, CHAN_AUTO, "sound/deathjingle.wav", 0.9, 0);
 }
 
 entity(entity bullet) clone_bullet =
@@ -199,8 +210,10 @@ void() bullet_touch =
 		float dmg_multi = 1;
 		float from_bottom = self.origin_z - other.absmin_z;
 		float ratio = from_bottom / (other.absmax_z - other.absmin_z);
-		if (ratio > 0.88) dmg_multi = 2.0;
+		if (ratio > 0.85) dmg_multi = 2.0;
 		if (ratio < 0.5) dmg_multi = 0.5;
+		dmg_multi += (self.owner.accuracy - 2) * 0.05;
+		printf("damage multi %f, %f\n", dmg_multi, self.accuracy);
 		// printf("ratio %f, multiplier %f\n", ratio, dmg_multi);
 		damage(other, get_damage(self.weapontype) * dmg_multi, self.velocity, self.owner);
 		// damage(other, 0.1 * dmg_multi, self.velocity, self.owner);
@@ -251,9 +264,12 @@ void() player_attack =
 	traceline(bl.origin, bl.origin + normalize(bl.velocity) * (32 + random() * 64), 0, bl);
 	setorigin(bl, bl.origin + 0.9 * (trace_endpos - bl.origin));
 	
-	sound(self, CHAN_AUTO, get_fire_sound(self.weapontype), 1, 0.5, 90 + random() * 6);
+	sound(self, CHAN_AUTO, get_fire_sound(self.weapontype), 0.95, 0.5, 88 + random() * 8);
+	sound(self, CHAN_AUTO, get_fire_sound(self.weapontype), 0.4 * random(), 0.9, 98 + random() * 6);
 	
-	for (entity enm = findradius(self.origin, 1700); enm; enm = enm.chain)
+	float alertradius = 1700;
+	if (self.weapontype == WEP_MP5) alertradius = 250;
+	for (entity enm = findradius(self.origin, alertradius); enm; enm = enm.chain)
 	{
 		if (enm.classname != "alien_minor") continue;
 		alert_enemy(enm, self.origin);
@@ -270,7 +286,7 @@ void() player_attack =
 	msg_entity = self;
 	multicast('0 0 0', MULTICAST_ONE);
 	
-	if (self.recoil > 1) self.recoil = 1;
+	if (self.recoil > 1.2) self.recoil = 1.2;
 	self.attack_finished = time + get_fire_delay(self.weapontype);
 }
 
@@ -316,9 +332,9 @@ void() PlayerPreThink =
 				BeginEvent(EVENT_CHARGE);
 				msg_entity = self;
 				multicast('0 0 0', MULTICAST_ONE);
-				sound(self, CHAN_AUTO, "sound/ak_charge.wav", 0.8, 1, 95 + random() * 5);
-				self.attack_finished = time + 0.6;
-				self.nextthink = time + 0.5;
+				sound(self, CHAN_AUTO, get_charge_sound(self.weapontype), 0.8, 1, 95 + random() * 5);
+				self.attack_finished = time + 0.5;
+				self.nextthink = time + 0.4;
 				self.think = finish_chambering;
 			}
 		}
@@ -379,13 +395,13 @@ const float CROUCHING_HEIGHT = 44;
 const float STANDING_VIEWOFS = 52;
 const float CROUCHING_VIEWOFS = 32;
 
-void() PlayerSpawn =
+void(float soldier) PlayerSpawn =
 {
 	self.classname = "player";
 	self.solid = SOLID_SLIDEBOX;
 	setmodel(self, "models/alien.iqm");
 	self.movetype = MOVETYPE_WALK;
-	self.health = 100;
+	self.health = 70 + 5 * player_team[soldier]->vitality;
 	setorigin(self, get_spawn_point());
 	self.angles = find(world, classname, "info_player_start").angles;
 	self.angles_x = 24;
@@ -402,16 +418,23 @@ void() PlayerSpawn =
 	
 	self.primary = spawn();
 	self.secondary = spawn();
-	init_gun(self.primary, WEP_AK);
-	init_gun(self.secondary, WEP_MP5);
+	init_gun(self.primary, player_team[soldier]->weapontype);
+	init_gun(self.secondary, WEP_PISTOL);
 	set_gun(self.primary);
 	self.using_primary = TRUE;
+	self.speed = player_team[soldier]->speed;
+	self.accuracy = player_team[soldier]->accuracy;
+	
+	localcmd("media_remove sound/action_song.oga\n");
+	// localcmd("media_add sound/action_song.oga\n");
 };
 
 void() PutClientInServer =
 {
 	player_chain_add(self);
-	PlayerSpawn();
+	// PlayerSpawn();
+	send_team(self);
+	send_recruitables(self);
 	
 };
 
@@ -445,10 +468,33 @@ void(string command_string) SV_ParseClientCommand =
 {
 	if (sv_editor_command(command_string)) return;
 	
-	tokenize(command_string);
+	float argc = tokenize(command_string);
 	string cmd = argv(0);
 	switch (cmd)
 	{
+	case "hire":
+		if (argc < 2) return;
+		float target = stof(argv(1));
+		if (recruitable[target]->cost > credits) return;
+
+		for (int i = 0; i < player_team.length; i++)
+		{
+			if (player_team[i].firstname == "")
+			{
+				copy_soldier(&(player_team[i]), &(recruitable[target]));
+				credits -= recruitable[target]->cost;
+				zero_soldier(&(recruitable[target]));
+				send_team(self);
+				send_recruitables(self);
+				return;
+			}
+		}
+		break;
+	case "deploy":
+		if (argc < 2) return;
+		float soldier = stof(argv(1));
+		PlayerSpawn(soldier);	
+		break;
 	default: break;
 	}
 	clientcommand(self, command_string);
@@ -499,7 +545,8 @@ void() SV_RunClientCommand =
 		
 	float target_penalty = self.aiming ? get_aim_inaccuracy(weaptype) : get_hip_inaccuracy(weaptype);
 	if (!crouching) target_penalty += 0.03;
-	target_penalty += min(1.4, vlen(self.velocity) / 320);
+	target_penalty += min(1.6, vlen(self.velocity) / 320) * get_movement_penalty_mult(self.weapontype);
+	
 	
 	if (self.recoil > 0)
 	{
@@ -507,10 +554,13 @@ void() SV_RunClientCommand =
 		target_penalty += crouching ? self.recoil * 0.5 : self.recoil;
 	}
 	
+	float accuracy_bonus = (4.5 - self.accuracy) * 0.02;
+	target_penalty += accuracy_bonus;
+	
 	if (self.aim_penalty > target_penalty)
-		self.aim_penalty = max(target_penalty, self.aim_penalty - input_timelength * 1.4);
+		self.aim_penalty = max(target_penalty, self.aim_penalty - input_timelength * (1.3 + self.accuracy * 0.15));
 	else 
-		self.aim_penalty = min(target_penalty, self.aim_penalty + input_timelength * 3.5);
+		self.aim_penalty = min(target_penalty, self.aim_penalty + input_timelength * 3.4);
 };
 
 

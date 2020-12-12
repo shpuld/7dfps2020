@@ -24,8 +24,8 @@ void(vector screensize) m_draw =
 	
 	vector realsize = getproperty(VF_SCREENPSIZE);
 	float target_conauto = 2;
-	if (realsize_y < 600) target_conauto = 1;
-	else if (realsize_y < 1200) target_conauto = 2;
+	if (realsize_x < 1200) target_conauto = 1;
+	else if (realsize_x < 2200 || realsize_y < 1300) target_conauto = 2;
 	else target_conauto = 4;
 	
 	if (target_conauto != cvar("vid_conautoscale")) localcmd(sprintf("vid_conautoscale %f\n", target_conauto));

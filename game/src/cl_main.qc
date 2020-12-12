@@ -32,7 +32,7 @@ void() viewmodel_update =
 
 	vmodel_time += frametime;
 
-	vector baseoffset = '10 -2.5 -2.25';
+	vector baseoffset = '10 -2.5 -2.4';
 	self.origin = baseoffset;
 
 	vector idleoffset = [0, sin(vmodel_time * 1.25) * 0.25, cos(vmodel_time * 1.75) * 0.25];
@@ -81,7 +81,10 @@ void() viewmodel_update =
 	self.angles = [recoil_pos.x * 0.5, recoil_pos.y * 1.5, recoil_pos.z * 2.5];
 	camang += self.angles;
 
-	current_fov = normalfov - aiming_lerp * 30;
+	float fovchange = 25;
+	if (current_gun == WEP_AK) fovchange += 8;
+	if (current_gun == WEP_RIFLE) fovchange += 25;
+	current_fov = normalfov - aiming_lerp * fovchange;
 
 	self.origin -= (baseoffset + '-3 0 0') * 0.6 * aiming_lerp;
 	self.origin -= angle_sway * 0.7 * aiming_lerp;
@@ -168,6 +171,8 @@ noref void(float apiver, string enginename, float enginever) CSQC_Init =
 	viewmodel.renderflags = RF_VIEWMODEL;
 	viewmodel_mzl.renderflags = RF_VIEWMODEL;
 	// viewmodel.predraw = viewmodel_draw;
+	
+	set_menu(MENU_TEAM);
 };
 
 noref void() CSQC_WorldLoaded =
@@ -247,8 +252,6 @@ void(float width, float height, float menushown) CSQC_UpdateView =
 	
 	draw_hud(viewmodel, 1 - (current_fov/normalfov));
 	
-	
-	
 	sui_begin(g_width, g_height);
 
 	draw_menu();
@@ -261,7 +264,7 @@ void(float width, float height, float menushown) CSQC_UpdateView =
 float(string cmd) CSQC_ConsoleCommand =
 {
 	if (cl_editor_command(cmd)) return TRUE;
-	
+
 	tokenize(cmd);
 	switch(argv(0))
 	{
@@ -310,6 +313,37 @@ float(float evtype, float scanx, float chary, float devid) CSQC_InputEvent =
 	return FALSE;
 };
 
+void(soldier* target) parse_soldier =
+{
+	// print("parsing soldier ");
+	target->firstname = readstring();
+	target->lastnamei = readbyte();
+	target->speed = readbyte();
+	target->accuracy = readbyte();
+	target->vitality = readbyte();
+	target->weapontype = readbyte();
+	target->cost = readshort();
+	// printf("%s.%s\n", target->firstname, lastnames[target->lastnamei]);
+}
+
+void() parse_team =
+{
+	float howmany = readbyte();
+	for (int i = 0; i < howmany; i++)
+	{
+		parse_soldier(&(player_team[i]));
+	}
+}
+
+void() parse_recruitables =
+{
+	float howmany = readbyte();
+	for (int i = 0; i < howmany; i++)
+	{
+		parse_soldier(&(recruitable[i]));
+	}
+}
+
 void() CSQC_Parse_Event =
 {
 	float first = readbyte();
@@ -342,9 +376,16 @@ void() CSQC_Parse_Event =
 			setmodel(viewmodel_mzl, get_muzzleflash_model(guntype));
 			viewmodel.frame = 0;
 			gunchange_time = 0.6;
+			current_gun = guntype;
 			break;
 		case EVENT_DAMAGE:
 			damage_amount += readbyte();
+			break;
+		case EVENT_SYNC_TEAM:
+			parse_team();
+			break;
+		case EVENT_SYNC_RECRUITABLES:
+			parse_recruitables();
 			break;
 		default:
 			printf("No action for byte %f\n", first);

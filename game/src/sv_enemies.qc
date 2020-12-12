@@ -1,6 +1,27 @@
 // Empty
 
 
+// For music
+float num_hostile_enemies;
+
+void() add_hostile_enemy =
+{
+	if (num_hostile_enemies == 0)
+		localcmd("media_add sound/action_song.oga\n");
+	num_hostile_enemies += 1;
+	printf("hostile enemies %.0f\n", num_hostile_enemies);
+}
+
+void() remove_hostile_enemy =
+{
+	
+	num_hostile_enemies -= 1;
+	printf("hostile enemies %.0f\n", num_hostile_enemies);
+	
+	if (num_hostile_enemies == 0)
+		localcmd("media_remove sound/action_song.oga\n");
+}
+
 void() misc_barrel =
 {
 	setmodel(self, "models/barrel.iqm");
@@ -106,6 +127,8 @@ void(entity e, entity player) spot_enemy =
 
 	sound_variation(e, CHAN_VOICE, "sound/spotted%.0f.wav", 5, 1, 0.6);
 	e.last_sound = time;
+	if (self.alert_state != ALERT_HOSTILE)
+		add_hostile_enemy();
 	e.alert_state = ALERT_HOSTILE;
 	e.attack_finished = time + 1;
 	e.enemy = player;
@@ -244,6 +267,7 @@ void() enemy_think =
 			self.targetpos = self.origin;
 			self.enemy = world;
 			self.spotting_counter = 0;
+			remove_hostile_enemy();
 		}
 
 		if (!can_see(self.enemy))
@@ -279,6 +303,7 @@ void() enemy_think =
 				self.targetpos = self.origin;
 				self.enemy = world;
 				self.spotting_counter = 0;
+				remove_hostile_enemy();
 			}
 		}
 		else
@@ -402,7 +427,6 @@ void() push_body_along_normal =
 
 void() body_hit =
 {
-	print("hit\n");
 	self.nextthink = time + 0.4;
 	self.think = align_body;
 	
@@ -426,6 +450,8 @@ void(float amount, vector dir, entity dealer) enemy_die =
 	self.touch = body_hit;
 	setsize(self, '0 0 0', '0 0 0');
 	sound_variation(self, CHAN_VOICE, "sound/die%.0f.wav", 5, 1, 0.8);
+	if (self.alert_state == ALERT_HOSTILE)
+		remove_hostile_enemy();
 }
 
 

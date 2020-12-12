@@ -27,7 +27,46 @@ const float FL_JUMPRELEASED = 4096;
 .float weapontype;
 .float using_primary;
 
+.float accuracy;
+.float speed;
 
+float credits;
+
+void(soldier* guy, float level) randomize_soldier =
+{
+	guy->firstname = chr2str(65 + rint(random() * 22));
+	guy->lastnamei = floor(random() * lastnames.length);
+	float reallevel = max(0, level - 1);
+	guy->speed = reallevel + rint(random() * 2.2);
+	guy->accuracy = reallevel + rint(random() * 2.2);
+	guy->vitality = reallevel + rint(random() * 2.2);
+	guy->weapontype = ceil(1 + random() * 2.9);
+	guy->cost = 1200 + reallevel * 800 + floor(random()*10)*100;
+	guy->player = world;
+}
+
+void(soldier* dst, soldier* src) copy_soldier =
+{
+	dst->firstname = src->firstname;
+	dst->lastnamei = src->lastnamei;
+	dst->speed = src->speed;
+	dst->accuracy = src->accuracy;
+	dst->vitality = src->vitality;
+	dst->weapontype = src->weapontype;
+	dst->cost = src->cost;
+}
+
+void(soldier* guy) zero_soldier =
+{
+	guy->firstname = "";
+	guy->lastnamei = 0;
+	guy->speed = 0;
+	guy->accuracy = 0;
+	guy->vitality = 0;
+	guy->weapontype = 0;
+	guy->cost = 0;
+	guy->player = world;
+}
 
 void() sub_remove =
 {
@@ -97,6 +136,47 @@ void(string s) MulticastString =
 {
 	WriteString(MSG_MULTICAST, s);
 };
+
+
+
+
+void(soldier* guy) MulticastSoldier =
+{
+	MulticastString(guy->firstname);
+	MulticastByte(guy->lastnamei);
+	MulticastByte(guy->speed);
+	MulticastByte(guy->accuracy);
+	MulticastByte(guy->vitality);
+	MulticastByte(guy->weapontype);
+	MulticastShort(guy->cost);
+}
+
+void(entity to_whom) send_team =
+{
+	msg_entity = to_whom;
+	BeginEvent(EVENT_SYNC_TEAM);
+	MulticastByte((float)(player_team.length));
+	for (int i = 0; i < player_team.length; i++)
+	{
+		MulticastSoldier(&(player_team[i]));
+	}
+	multicast('0 0 0', MULTICAST_ONE_R);
+}
+
+void(entity to_whom) send_recruitables =
+{
+	msg_entity = to_whom;
+	BeginEvent(EVENT_SYNC_RECRUITABLES);
+	MulticastByte((float)(recruitable.length));
+	for (int i = 0; i < recruitable.length; i++)
+	{
+		MulticastSoldier(&(recruitable[i]));
+	}
+	multicast('0 0 0', MULTICAST_ONE_R);
+}
+
+
+
 
 void() light =
 {

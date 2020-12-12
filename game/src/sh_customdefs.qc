@@ -8,13 +8,16 @@ const float STAT_CROUCHING = 52;
 const float STAT_CHAMBERED = 53;
 const float STAT_MAGAZINE = 54;
 const float STAT_RESERVE = 55;
+const float STAT_CREDITS = 56;
+const float STAT_SPEED = 57;
 
 const float EVENT_RECOIL = 1;
 const float EVENT_RELOAD = 2;
 const float EVENT_CHARGE = 3;
 const float EVENT_SETGUN = 4;
 const float EVENT_DAMAGE = 5;
-
+const float EVENT_SYNC_TEAM = 6;
+const float EVENT_SYNC_RECRUITABLES = 7;
 
 
 const float WEP_PISTOL = 1;
@@ -38,7 +41,7 @@ float(float type) get_hip_inaccuracy =
 {
 	switch (type)
 	{
-	case WEP_PISTOL: return 0.25;
+	case WEP_PISTOL: return 0.2;
 	case WEP_AK: return 0.2;
 	case WEP_MP5: return 0.25;
 	case WEP_RIFLE: return 0.1;
@@ -50,7 +53,7 @@ float(float type) get_recoil =
 {
 	switch (type)
 	{
-	case WEP_PISTOL: return 0.3;
+	case WEP_PISTOL: return 0.35;
 	case WEP_AK: return 0.32;
 	case WEP_MP5: return 0.16;
 	case WEP_RIFLE: return 0.4;
@@ -70,12 +73,24 @@ float(float type) get_fire_delay =
 	}
 }
 
+float(float type) get_movement_penalty_mult =
+{
+	switch (type)
+	{
+	case WEP_PISTOL: return 0.5;
+	case WEP_AK: return 1.2;
+	case WEP_MP5: return 0.8;
+	case WEP_RIFLE: return 1.3;
+	default: return 1;
+	}
+}
+
 float(float type) get_damage =
 {
 	switch (type)
 	{
-	case WEP_PISTOL: return 15 + random() * 25;
-	case WEP_AK: return 25 + random() * 32;
+	case WEP_PISTOL: return 26 + random() * 25;
+	case WEP_AK: return 30 + random() * 25;
 	case WEP_MP5: return 20 + random() * 25;
 	case WEP_RIFLE: return 35 + random() * 35;
 	default: return 0;
@@ -86,7 +101,7 @@ string(float type) get_fire_sound =
 {
 	switch (type)
 	{
-	case WEP_PISTOL: return "sound/ak.wav";
+	case WEP_PISTOL: return "sound/pistol.wav";
 	case WEP_AK: return "sound/ak.wav";
 	case WEP_MP5: return "sound/mp5.wav";
 	case WEP_RIFLE: return "sound/ak.wav";
@@ -94,11 +109,39 @@ string(float type) get_fire_sound =
 	}
 }
 
+string(float type) get_reload_sound =
+{
+	switch (type)
+	{
+	case WEP_PISTOL: return "sound/pistol_reload.wav";
+	default: return "sound/ak_reload.wav";
+	}
+}
+
+string(float type) get_charge_sound =
+{
+	switch (type)
+	{
+	case WEP_PISTOL: return "sound/pistol_charge.wav";
+	default: return "sound/ak_charge.wav";
+	}
+}
+
+
+float(float type) get_reload_time =
+{
+	switch (type)
+	{
+	case WEP_PISTOL: return 1.5;
+	default: return 2.45;
+	}
+}
+
 string(float type) get_gun_model =
 {
 	switch (type)
 	{
-	case WEP_PISTOL: return "models/ak.iqm";
+	case WEP_PISTOL: return "models/pistol.iqm";
 	case WEP_AK: return "models/ak.iqm";
 	case WEP_MP5: return "models/mp5.iqm";
 	case WEP_RIFLE: return "models/ak.iqm";
@@ -106,11 +149,24 @@ string(float type) get_gun_model =
 	}
 }
 
+string(float type) get_gun_name =
+{
+	switch (type)
+	{
+	case WEP_PISTOL: return "9mm";
+	case WEP_AK: return "AK-762";
+	case WEP_MP5: return "MP-SD";
+	case WEP_RIFLE: return "DMR";
+	default: return "N/A";
+	}
+}
+
+
 string(float type) get_muzzleflash_model =
 {
 	switch (type)
 	{
-	// case WEP_PISTOL: return "models/ak.iqm";
+	case WEP_PISTOL: return "models/pistol_mzl.iqm";
 	case WEP_AK: return "models/ak_mzl.iqm";
 	case WEP_MP5: return "models/mp5_mzl.iqm";
 	// case WEP_RIFLE: return "models/ak.iqm";
@@ -144,13 +200,158 @@ float(float type) get_reserve =
 
 
 struct soldier {
-	float namei;
+	string firstname;
+	float lastnamei;
 	float speed;
 	float accuracy;
-	float weapontype;
 	float vitality;
+	float weapontype;
+	float cost;
+	entity player;
 };
 
+soldier player_team[8];
+soldier recruitable[4];
+
+string lastnames[] =  {
+	"Jackson",
+	"Willy",
+	"Mason",
+	"Connors",
+	"Ling",
+	"Lee",
+	"Ramirez",
+	"Rodriguez",
+	"Burke",
+	"Smith",
+	"Johnson",
+	"Darkholme",
+	"Herrington",
+	"Wolff",
+	"Jaeger",
+	"Bastille",
+	"Buck",
+	"Braun",
+	"Rogers",
+	"Hernandez",
+	"Sakamoto",
+	"Perse",
+	"Virta",
+	"Granberg",
+	"Rambo",
+	"Willis",
+	"Jones",
+	"Trevor",
+	"Paul",
+	"Pierre",
+	"Francis",
+	"Holmes",
+	"Greenberg",
+	"Tanaka",
+	"Murphy",
+	"Mann",
+	"Mungus",
+	"Ripley",
+	"Bravo",
+	"Chavez",
+	"Cash",
+	"Prince",
+	"King",
+	"Palmer",
+	"Ballmer",
+	"Warden",
+	"Focker",
+	"Champion",
+	"Jeeves",
+	"Bobson",
+	"Dugnutt",
+	"Dogman",
+	"Woods",
+	"Bigfoot",
+	"Bonzales",
+	"Singov",
+	"Smirnov",
+	"Ivanov",
+	"Romanov",
+	"Makarov",
+	"Lebedev",
+	"Hermann",
+	"Wesker",
+	"Redfield",
+	"Kennedy",
+	"Carver",
+	"Russo",
+	"Bruno",
+	"Lombardi",
+	"Pellegrino",
+	"Orlando",
+	"Fisher",
+	"Price",
+	"Augustus",
+	"Christian",
+	"Guillaume",
+	"Lambert",
+	"Leroy",
+	"Jenkins",
+	"Page",
+	"Simons",
+	"Pascal",
+	"Stallman",
+	"Bacon",
+	"Cofe",
+	"Boss",
+	"Petit",
+	"Small",
+	"Biggs",
+	"Christin",
+	"Jensen",
+	"Adam",
+	"Wetriver",
+	"Kickelberg",
+	"Poisson",
+	"Morrison",
+	"Kant",
+	"Descartes",
+	"Dozsa",
+	"Andrzejczak",
+	"Bartoszewicz",
+	"Kobuszewski",
+	"Radziszewski",
+	"Matsumoto",
+	"Hadaka",
+	"Pelvis",
+	"Campbell",
+	"Redifer",
+	"Gentleman",
+	"Butte",
+	"Denton",
+	"Ross",
+	"Hicks",
+	"Night",
+	"Badwater",
+	"Goodwater",
+	"Clearwater",
+	"Krieg",
+	"Wurst",
+	"Flynn",
+	"Stacker",
+	"Scott",
+	"Winters",
+	"Standing",
+	"Powers"
+};
+
+string(soldier* guy) soldier_name =
+{
+	return sprintf("%s.%s", guy->firstname, lastnames[guy->lastnamei]);
+}
+
+float() is_team_full =
+{
+	for (int i = 0; i < player_team.length; i++)
+		if (player_team[i].firstname == "") return FALSE;
+	return TRUE;
+}
 
 float() srandom = { return 2*random() - 1; }
 
@@ -159,14 +360,19 @@ void() precache_everything =
 	precache_sound("demon/dland2.wav");
 	precache_sound("sound/ak.wav");
 	precache_sound("sound/mp5.wav");
+	precache_sound("sound/pistol.wav");
 	precache_sound("sound/ak_charge.wav");
+	precache_sound("sound/pistol_charge.wav");
 	precache_sound("sound/ak_reload.wav");
+	precache_sound("sound/pistol_reload.wav");
 	precache_sound("sound/rico1.wav");
 	precache_sound("sound/rico2.wav");
 	precache_sound("sound/rico3.wav");
 	precache_sound("sound/bullethit.wav");
 	precache_sound("sound/alienshot.wav");
 	precache_sound("sound/alienbullethit.wav");
+	precache_sound("sound/deathjingle.wav");
+	precache_sound("sound/switch.wav");
 	
 	precache_sound("sound/hurt1.wav");
 	precache_sound("sound/hurt2.wav");
@@ -205,9 +411,11 @@ void() precache_everything =
 	precache_model("models/bullet.iqm");
 	precache_model("models/alienbullet.iqm");
 	precache_model("models/ak.iqm");
+	precache_model("models/pistol.iqm");
 	precache_model("models/ak_mzl.iqm");
 	precache_model("models/mp5.iqm");
 	precache_model("models/mp5_mzl.iqm");
+	precache_model("models/pistol_mzl.iqm");
 	
 	particleeffectnum("weapons.alienblood");
 	particleeffectnum("weapons.bullethit");

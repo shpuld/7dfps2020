@@ -1,6 +1,8 @@
 
 void(entity viewmodel, float zoom) draw_hud =
 {
+	if (in_menu != MENU_NONE) return;
+
 	makevectors(camang);
 	vector hudsize = [42 * 4 + 8, 28];
 	vector basepos = project(campos + v_forward * (viewmodel.origin.x + 2 + zoom * 12) - v_right * viewmodel.origin.y + v_up * (viewmodel.origin.z - 4 + zoom * 6)) - [hudsize.x, 0];

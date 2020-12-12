@@ -255,7 +255,7 @@ ak
 {
 	{
 		program glsl/defaultskin2.glsl
-		map $nearest:models/ak.png
+		map $nearest:models/ak
 	}
 }
 
@@ -263,9 +263,18 @@ mp5
 {
 	{
 		program glsl/defaultskin2.glsl
-		map $nearest:models/mp5.png
+		map $nearest:models/mp5
 	}
 }
+
+usp
+{
+	{
+		program glsl/defaultskin2.glsl
+		map $nearest:models/usp
+	}
+}
+
 
 
 skysky

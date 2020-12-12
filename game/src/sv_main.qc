@@ -24,9 +24,21 @@ void() worldspawn =
 	clientstat(STAT_CHAMBERED, EV_FLOAT, chambered);
 	clientstat(STAT_MAGAZINE, EV_FLOAT, magazine);
 	clientstat(STAT_RESERVE, EV_FLOAT, reserve);
+	clientstat(STAT_SPEED, EV_FLOAT, speed);
+	
+	globalstat(STAT_CREDITS, EV_FLOAT, "credits");
 	
 	self.nextthink = time + 2.5;
 	self.think = spawn_enemies;
+	
+	// printf("player team length %i\n", player_team.length);
+	for (int i = 0; i < 7; i++)
+		randomize_soldier(&(player_team[i]), i);
+		
+	for (int i = 0; i < 4; i++)
+		randomize_soldier(&(recruitable[i]), 0);
+		
+	credits = 1300;
 }
 
 void() SpectatorConnect =
