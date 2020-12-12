@@ -25,6 +25,7 @@ const float FL_JUMPRELEASED = 4096;
 .entity primary;
 .entity secondary;
 .float weapontype;
+.float using_primary;
 
 
 

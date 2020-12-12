@@ -9,6 +9,17 @@ aparticle
 	}
 }
 
+aparticle2
+{
+	{
+		map particles/puff.tga
+		alphagen vertex
+		rgbGen vertex
+		alphafunc GE128
+	}
+}
+
+
 aring
 {
 	{

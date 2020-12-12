@@ -3,11 +3,6 @@
 //	Player.qc - Various stuff done for the player, including per-frame functions like PlayerPreThink and PlayerPostThink, also client specific stuff like PutClientInServer etc.
 //
 
-void() fill_magazine =
-{
-	self.magazine = 30;
-}
-
 void(float type) set_gun_type =
 {
 	if (time < self.attack_finished) return;
@@ -21,13 +16,71 @@ void(float type) set_gun_type =
 	self.aim_penalty = 1.25;
 }
 
+void(entity tgt, entity src) copy_gun =
+{
+	tgt.weapontype = src.weapontype;
+	tgt.magazine = src.magazine;
+	tgt.chambered = src.chambered;
+	tgt.reserve = src.reserve;
+}
+
 void(entity gun) set_gun =
 {
 	if (time < self.attack_finished) return;
 	
+	copy_gun(self, gun);
 	set_gun_type(gun.weapontype);
-	self.magazine = gun.magazine;
-	self.chambered = gun.chambered;
+}
+
+void(entity newgun, float type) init_gun =
+{
+	newgun.weapontype = type;
+	newgun.chambered = FALSE;
+	newgun.magazine = get_magazine(type);
+	newgun.reserve = get_reserve(type);
+}
+
+void() fill_magazine =
+{
+	float to_fill = get_magazine(self.weapontype) - self.magazine;
+	float actual_fill = min(to_fill, self.reserve);
+	self.magazine += actual_fill;
+	self.reserve -= actual_fill;
+}
+
+void() reload_gun =
+{
+	if (time < self.attack_finished) return;
+	if (self.reserve <= 0) return;
+	if (self.magazine >= get_magazine(self.weapontype)) return;
+	if (self.dead) return;
+
+	self.nextthink = time + 2.6;
+	self.think = fill_magazine;
+	self.attack_finished = time + 2.6;
+	BeginEvent(EVENT_RELOAD);
+	msg_entity = self;
+	multicast('0 0 0', MULTICAST_ONE);
+	sound(self, CHAN_AUTO, "sound/ak_reload.wav", 0.8, 1, 95 + random() * 5);
+}
+
+void() switch_gun =
+{
+	if (time < self.attack_finished) return;
+	if (self.dead) return;
+
+	if (self.using_primary)
+	{
+		copy_gun(self.primary, self);
+		set_gun(self.secondary);
+		self.using_primary = FALSE;
+	}
+	else
+	{
+		copy_gun(self.secondary, self);
+		set_gun(self.primary);
+		self.using_primary = TRUE;
+	}
 }
 
 void() CheckImpulses =
@@ -49,20 +102,10 @@ void() CheckImpulses =
 		set_gun_type(WEP_AK);
 		break;
 	case 10:
-		if (time < self.attack_finished) return;
-		self.nextthink = time + 2.6;
-		self.think = fill_magazine;
-		self.attack_finished = time + 2.6;
-		BeginEvent(EVENT_RELOAD);
-		msg_entity = self;
-		multicast('0 0 0', MULTICAST_ONE);
-		sound(self, CHAN_AUTO, "sound/ak_reload.wav", 0.8, 1, 95 + random() * 5);
+		reload_gun();
 		break;
 	case 11:
-		BeginEvent(EVENT_CHARGE);
-		msg_entity = self;
-		multicast('0 0 0', MULTICAST_ONE);
-		sound(self, CHAN_AUTO, "sound/ak_charge.wav", 0.8, 1, 95 + random() * 5);
+		switch_gun();
 		break;
 	default: break;
 	}
@@ -94,12 +137,25 @@ void() player_land =
 
 void(float amount, vector dir, entity dealer) player_hurt =
 {
-
+	BeginEvent(EVENT_DAMAGE);
+	MulticastByte(amount);
+	msg_entity = self;
+	multicast('0 0 0', MULTICAST_ONE_R);
 }
 
 void(float amount, vector dir, entity dealer) player_die =
 {
-
+	BeginEvent(EVENT_DAMAGE);
+	MulticastByte(amount);
+	msg_entity = self;
+	multicast('0 0 0', MULTICAST_ONE_R);
+	
+	setorigin(self, self.origin + self.view_ofs);
+	self.view_ofs = '0 0 0';
+	setsize(self, '-10 -10 -10', '10 10 8');
+	self.movetype = MOVETYPE_TOSS;
+	self.dead = TRUE;
+	self.health = -1;
 }
 
 entity(entity bullet) clone_bullet =
@@ -117,6 +173,7 @@ entity(entity bullet) clone_bullet =
 	nb.velocity = bullet.velocity;
 	nb.solid = bullet.solid;
 	nb.movetype = bullet.movetype;
+	nb.weapontype = bullet.weapontype;
 	return nb;
 }
 
@@ -144,10 +201,17 @@ void() bullet_touch =
 		float ratio = from_bottom / (other.absmax_z - other.absmin_z);
 		if (ratio > 0.88) dmg_multi = 2.0;
 		if (ratio < 0.5) dmg_multi = 0.5;
-		printf("ratio %f, multiplier %f\n", ratio, dmg_multi);
-		damage(other, (22 + random() * 35) * dmg_multi, self.velocity, self.owner);
+		// printf("ratio %f, multiplier %f\n", ratio, dmg_multi);
+		damage(other, get_damage(self.weapontype) * dmg_multi, self.velocity, self.owner);
+		// damage(other, 0.1 * dmg_multi, self.velocity, self.owner);
+		pointparticles(particleeffectnum("weapons.alienblood"), self.origin, trace_plane_normal);
 	}
-	pointparticles(particleeffectnum("weapons.bullet_impact"), self.origin + trace_plane_normal * 4, trace_plane_normal);
+	float surf = getsurfacenearpoint(other, self.origin);
+	string text = getsurfacetexture(other, surf);
+	
+	if (text != "textures/dev/test_sky")
+		pointparticles(particleeffectnum("weapons.bullet_impact"), self.origin + trace_plane_normal * 4, trace_plane_normal);
+
 	remove(self);
 	// printf("hit something %s\n", etos(other));
 }
@@ -170,6 +234,7 @@ entity(entity shooter, vector pos, vector dir) bullet_spawn =
 
 	bullet.touch = bullet_touch;
 	bullet.owner = shooter;
+	bullet.weapontype = shooter.weapontype;
 	
 	return bullet;
 }
@@ -187,6 +252,12 @@ void() player_attack =
 	setorigin(bl, bl.origin + 0.9 * (trace_endpos - bl.origin));
 	
 	sound(self, CHAN_AUTO, get_fire_sound(self.weapontype), 1, 0.5, 90 + random() * 6);
+	
+	for (entity enm = findradius(self.origin, 1700); enm; enm = enm.chain)
+	{
+		if (enm.classname != "alien_minor") continue;
+		alert_enemy(enm, self.origin);
+	}
 	
 	float recoil_amount = get_recoil(self.weapontype);
 	// AK
@@ -326,10 +397,15 @@ void() PlayerSpawn =
 	self.takes_damage = TRUE;
 	self.dead = FALSE;
 	// self.weapontype = WEP_MP5;
-	set_gun_type(WEP_AK);
-	self.magazine = 30;
 	droptofloor();
 	player_normal();
+	
+	self.primary = spawn();
+	self.secondary = spawn();
+	init_gun(self.primary, WEP_AK);
+	init_gun(self.secondary, WEP_MP5);
+	set_gun(self.primary);
+	self.using_primary = TRUE;
 };
 
 void() PutClientInServer =
@@ -382,8 +458,12 @@ void(string command_string) SV_ParseClientCommand =
 void() SV_RunClientCommand =
 {
 	if (self.dead)
+	{
 		input_movevalues *= 0;
-		
+		runstandardplayerphysics(self);
+		return;
+	}
+	
 	float weaptype = self.weapontype;
 		
 	if (self.aiming) input_movevalues *= 0.6;
@@ -418,17 +498,17 @@ void() SV_RunClientCommand =
 		self.velocity = proposed_velocity;
 		
 	float target_penalty = self.aiming ? get_aim_inaccuracy(weaptype) : get_hip_inaccuracy(weaptype);
-	if (!crouching) target_penalty += 0.05;
+	if (!crouching) target_penalty += 0.03;
 	target_penalty += min(1.4, vlen(self.velocity) / 320);
 	
 	if (self.recoil > 0)
 	{
-		self.recoil -= input_timelength;
+		self.recoil -= input_timelength * 1.1;
 		target_penalty += crouching ? self.recoil * 0.5 : self.recoil;
 	}
 	
 	if (self.aim_penalty > target_penalty)
-		self.aim_penalty = max(target_penalty, self.aim_penalty - input_timelength * 1);
+		self.aim_penalty = max(target_penalty, self.aim_penalty - input_timelength * 1.4);
 	else 
 		self.aim_penalty = min(target_penalty, self.aim_penalty + input_timelength * 3.5);
 };

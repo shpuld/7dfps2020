@@ -15,6 +15,17 @@ void() misc_barrel =
 	self.touch = sub_fake_remove;
 }
 
+void() alienbullet_touch =
+{
+	pointparticles(particleeffectnum("weapons.alienbullet_hit"), self.origin, trace_plane_normal);
+	sound(self, CHAN_AUTO, "sound/alienbullethit.wav", 0.4 + random() * 0.3, 0.8, 90 + random() * 16);
+	sound_variation(self, CHAN_AUTO, "sound/rico%.0f.wav", 3, 0.9 + random() * 0.3, 0.7);
+	
+	if (other.classname == "player")
+		damage(other, 12 + rint(random() * 15), self.velocity, self.owner);
+	remove(self);
+}
+
 enum alert_state_t {
 	ALERT_NONE,
 	ALERT_AWARE,
@@ -37,8 +48,9 @@ const float ANIM_DIE = 9;
 .vector targetpos;
 .float spotting_counter;
 .float next_move;
+.float last_sound;
 
-const float AGGRO_DIST = 1600;
+const float AGGRO_DIST = 2000;
 const float AGGRO_DOT = 0.4;
 
 float(entity target) can_see =
@@ -53,6 +65,7 @@ float(entity target) can_see =
 
 float(float dist) move_forward =
 {
+	self.movetype = MOVETYPE_STEP;
 	if (angle_diff(self.angles_y, self.ideal_yaw) > 45)
 	{
 		changeyaw();
@@ -61,10 +74,10 @@ float(float dist) move_forward =
 	float success = walkmove(self.ideal_yaw, dist);
 	if (!success) success = walkmove(self.ideal_yaw + 25, dist);
 	if (!success) success = walkmove(self.ideal_yaw - 25, dist);
-	if (!success) success = walkmove(self.ideal_yaw + 65, dist);
-	if (!success) success = walkmove(self.ideal_yaw - 65, dist);
-	if (!success) success = walkmove(self.ideal_yaw + 80, dist);
-	if (!success) success = walkmove(self.ideal_yaw - 80, dist);
+	if (!success) success = walkmove(self.ideal_yaw + 55, dist);
+	if (!success) success = walkmove(self.ideal_yaw - 55, dist);
+	if (!success) success = walkmove(self.ideal_yaw + 75, dist);
+	if (!success) success = walkmove(self.ideal_yaw - 75, dist);
 	
 	return success;
 };
@@ -76,6 +89,7 @@ entity() find_enemy =
 		vector to_player = head.origin - self.origin;
 		float dist = AGGRO_DIST;
 		if (self.alert_state == ALERT_NONE) dist *= 0.5;
+		if (head.dead) continue;
 		if (vlen(to_player) > AGGRO_DIST) continue;
 		makevectors(self.angles);
 		if (normalize(to_player) * v_forward < AGGRO_DOT) continue;
@@ -90,9 +104,12 @@ void(entity e, entity player) spot_enemy =
 {
 	if (!player) return;
 
+	sound_variation(e, CHAN_VOICE, "sound/spotted%.0f.wav", 5, 1, 0.6);
+	e.last_sound = time;
 	e.alert_state = ALERT_HOSTILE;
+	e.attack_finished = time + 1;
 	e.enemy = player;
-	e.frame = ANIM_IDLE_ALERT;
+	// e.frame = ANIM_IDLE_ALERT;
 };
 
 void(entity e, vector location) alert_enemy =
@@ -110,6 +127,8 @@ void(float spot_threshold) spot_enemy_try =
 	if (enm)
 	{
 		self.spotting_counter++;
+		if (vlen(self.origin - enm.origin) < 500) self.spotting_counter++;
+
 		if (self.spotting_counter >= spot_threshold)
 		{
 			if (self.alert_state == ALERT_NONE)
@@ -149,25 +168,37 @@ void() enemy_think =
 		else
 		{
 			changeyaw();
-			move_forward(4);
+			move_forward(5);
 			self.on_move -= 1;
 			moving = TRUE;
 		}
 		
-		spot_enemy_try(7);
+		if (time > (self.last_sound + 5) && random() > 0.8)
+		{
+			sound_variation(self, CHAN_VOICE, "sound/idle%.0f.wav", 5, 0.7, 0.8);
+			self.last_sound = time;
+		}
+		
+		spot_enemy_try(8);
 	}
 	else if (self.alert_state == ALERT_AWARE)
 	{
 		to_target = self.targetpos - self.origin;
 
-		spot_enemy_try(7);
+		spot_enemy_try(6);
 
 		changeyaw();
+		
+		if (time > (self.last_sound + 5) && random() > 0.8)
+		{
+			sound_variation(self, CHAN_VOICE, "sound/alert%.0f.wav", 5, 0.7, 0.8);
+			self.last_sound = time;
+		}
 
 		if (vlen(to_target) > 96)
 		{
 			self.ideal_yaw = vectoangles(to_target)[1];
-			moved = move_forward(6);
+			moved = move_forward(8);
 			if (moved)
 				moving = TRUE;
 			else
@@ -175,11 +206,11 @@ void() enemy_think =
 		}
 		else
 		{
-			if (r > 0.75)
+			if (r > 0.6)
 			{
 				self.ideal_yaw = random() * 360;
 			}
-			if (r > 0.9)
+			if (r > 0.75)
 			{
 				float baseangle = random() * 360;
 				for (float i = 0; i < 16; i++)
@@ -193,10 +224,28 @@ void() enemy_think =
 					}
 				}
 			}
+			if (r > 0.85)
+			{
+				self.targetpos = find_enemy().origin;
+			}
 		}
 	}
 	else if (self.alert_state == ALERT_HOSTILE)
 	{
+		if (time > (self.last_sound + 5) && random() > 0.8)
+		{
+			sound_variation(self, CHAN_VOICE, "sound/spotted%.0f.wav", 5, 0.7, 0.8);
+			self.last_sound = time;
+		}
+		
+		if (self.enemy.dead)
+		{
+			self.alert_state = ALERT_AWARE;
+			self.targetpos = self.origin;
+			self.enemy = world;
+			self.spotting_counter = 0;
+		}
+
 		if (!can_see(self.enemy))
 		{
 			// self.targetpos = self.enemy.origin;
@@ -204,7 +253,7 @@ void() enemy_think =
 			self.ideal_yaw = vectoangles(to_target)[1];
 			changeyaw();
 			
-			moved = move_forward(15);
+			moved = move_forward(20);
 			
 			if (!moved)
 			{
@@ -222,7 +271,7 @@ void() enemy_think =
 				moving = TRUE;
 			}
 			
-			self.next_move = time + 1;
+			self.next_move = time + 0.75;
 			self.spotting_counter += 1;
 			if (self.spotting_counter > 100)
 			{
@@ -234,6 +283,12 @@ void() enemy_think =
 		}
 		else
 		{
+			if (self.spotting_counter > 30)
+			{
+				sound_variation(self, CHAN_VOICE, "sound/spotted%.0f.wav", 5, 0.7, 0.8);
+				self.last_sound = time;
+			}
+
 			self.spotting_counter = 0;
 			self.targetpos = self.enemy.origin + '0 0 45';
 			to_target = self.targetpos - self.origin;
@@ -242,12 +297,12 @@ void() enemy_think =
 			
 			if (time > (self.next_move - 3))
 			{
-				move_forward(15);
+				move_forward(20);
 				moving = TRUE;
 				if (time > self.next_move)
 				{
-					self.next_move = time + 4.2;
-					if (vlen(to_target) > 128)
+					self.next_move = time + 4;
+					if (vlen(to_target) < 150)
 						self.next_move += 2;
 				}
 			}
@@ -262,13 +317,16 @@ void() enemy_think =
 					bull.velocity = fwd * 2100 + randomvec() * 80;
 					setsize(bull, '0 0 0', '0 0 0');
 					bull.movetype = MOVETYPE_FLYMISSILE;
-					bull.touch = sub_remove;
+					bull.touch = alienbullet_touch;
 					bull.solid = SOLID_BBOX;
 					bull.angles = vectoangles(bull.velocity);
 					bull.owner = self;
 					setorigin(bull, self.origin + '0 0 42' + fwd * 16);
-					self.attack_finished = time + 0.2;
+					self.attack_finished = time + 0.15;
 					self.frame = ANIM_SHOOT;
+					
+					pointparticles(particleeffectnum("weapons.alien_mzl"), bull.origin, fwd);
+					sound(self, CHAN_WEAPON, "sound/alienshot.wav", 1.0, 0.3, 90 + random() * 18);
 				}
 			}
 		}
@@ -289,7 +347,14 @@ void() enemy_think =
 			self.frame = ANIM_IDLE;
 		else
 			self.frame = ANIM_IDLE_ALERT;
+			
+		self.movetype = MOVETYPE_TOSS;
+		self.velocity.x *= 0.5;
+		self.velocity.y *= 0.5;
+		self.gravity = 1;
 	}
+	
+	
 };
 
 void(float amount, vector dir, entity dealer) enemy_hurt = 
@@ -303,11 +368,50 @@ void(float amount, vector dir, entity dealer) enemy_hurt =
 	else
 	{
 		self.frame = ANIM_HURT;
-		self.nextthink = time + 1.0;
+		self.nextthink = time + 0.9;
 	}
 	self.think = enemy_think;
-	alert_enemy(self, dealer.origin + '0 0 32');
+	spot_enemy(self, dealer);
+	
+	sound_variation(self, CHAN_VOICE, "sound/hurt%.0f.wav", 4, 1, 0.8);
+	self.last_sound = time;
+	
+	for (entity enm = findradius(self.origin, 900); enm; enm = enm.chain)
+	{
+		if (enm.classname == "alien_minor")
+			alert_enemy(enm, dealer.origin);
+	}
+	// alert_enemy(self, dealer.origin + '0 0 32');
 };
+
+void() align_body =
+{
+	if (vlen(self.velocity) > 50) return;
+	traceline(self.origin + '0 0 1', self.origin - '0 0 16', 0, self);
+	if (trace_plane_normal.z < 0.5) return;
+	makevectors(self.angles);
+	vector newforward = crossproduct(trace_plane_normal, v_right);
+	self.angles = vectoangles(newforward, trace_plane_normal);
+}
+
+void() push_body_along_normal =
+{
+	traceline(self.origin + '0 0 1', self.origin - '0 0 16', 0, self);
+	if (trace_plane_normal.z < 0.5) self.velocity = trace_plane_normal * 150;
+}
+
+void() body_hit =
+{
+	print("hit\n");
+	self.nextthink = time + 0.4;
+	self.think = align_body;
+	
+	if (trace_plane_normal_z < 0.5)
+	{
+		self.nextthink = time + 0.01;
+		self.think = push_body_along_normal;
+	}
+}
 
 void(float amount, vector dir, entity dealer) enemy_die =
 {
@@ -319,6 +423,9 @@ void(float amount, vector dir, entity dealer) enemy_die =
 	self.velocity = normalize(dir) * 250;
 	self.velocity_z = 150;
 	self.angles = vectoangles(-[dir.x, dir.y]);
+	self.touch = body_hit;
+	setsize(self, '0 0 0', '0 0 0');
+	sound_variation(self, CHAN_VOICE, "sound/die%.0f.wav", 5, 1, 0.8);
 }
 
 
@@ -329,12 +436,14 @@ void() alien_minor =
 	self.solid = SOLID_BBOX;
 	self.movetype = MOVETYPE_STEP;
 	
-	self.nextthink = time + 1 + random()*2;
+	self.nextthink = time + 0.1 + random()*0.5;
 	self.think = enemy_think;
 	self.alert_state = ALERT_NONE;
 	self.takes_damage = TRUE;
 	self.health = 90;
 	self.hurt = enemy_hurt;
 	self.die = enemy_die;
-	self.yaw_speed = 15;
+	self.yaw_speed = 17;
+	
+	self.classname = "alien_minor";
 }

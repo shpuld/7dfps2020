@@ -8,19 +8,25 @@ void() StartFrame =
 
 }
 
+void() spawn_enemies;
+
 void() worldspawn =
 {	
 	precache_everything();
 	
 	sv_editor_init();
 
-	editor_load_ents("default");
+	// editor_load_ents("default");
 	editor_play();
 	
 	clientstat(STAT_AIMING, EV_FLOAT, aiming);
 	clientstat(STAT_AIM_PENALTY, EV_FLOAT, aim_penalty);
 	clientstat(STAT_CHAMBERED, EV_FLOAT, chambered);
 	clientstat(STAT_MAGAZINE, EV_FLOAT, magazine);
+	clientstat(STAT_RESERVE, EV_FLOAT, reserve);
+	
+	self.nextthink = time + 2.5;
+	self.think = spawn_enemies;
 }
 
 void() SpectatorConnect =
@@ -31,6 +37,32 @@ void() SpectatorConnect =
 // float BLOCK_SIZE = 320;
 float BLOCK_SIZE = 512;
 vector WORLD_SIZE = '10 10 0';
+
+void() spawn_enemies =
+{
+	float enemies_to_spawn = 12;
+	float enemies_spawned = 0;
+	float safedist = 1600;
+	entity point = find(world, classname, "info_notnull");
+	entity old_self = self;
+	for (float i = 0; i < 100; i++)
+	{
+		vector pos = point.origin + [safedist + random() * (BLOCK_SIZE * WORLD_SIZE.x - safedist * 1.25), safedist + random() * (BLOCK_SIZE * WORLD_SIZE.y - safedist * 1.25), 512];
+		tracebox(pos, '-16 -16 0', '16 16 64', pos - '0 0 1024', 0, point);
+		if (trace_endpos.z > (point.origin.z + 64)) continue;
+		if (trace_plane_normal.z < 0.7) continue;
+
+		entity dummy = spawn();
+		setorigin(dummy, trace_endpos);	
+		self = dummy;
+		alien_minor();
+		enemies_spawned += 1;
+	
+		if (enemies_spawned >= enemies_to_spawn) break;
+	}
+	self = old_self;
+}
+
 
 
 .vector org_point;

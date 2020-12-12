@@ -239,9 +239,17 @@ alien
 	{
 		program glsl/defaultskin2.glsl
 		map $nearest:models/alien.png
-		rgbGen lightingDiffuse
 	}
 }
+
+aliengun
+{
+	{
+		program glsl/defaultskin2.glsl
+		map $nearest:models/aliengun.png
+	}
+}
+
 
 ak
 {

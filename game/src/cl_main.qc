@@ -175,6 +175,8 @@ noref void() CSQC_WorldLoaded =
 
 };
 
+float damage_amount;
+
 noref void(float isnew) CSQC_Ent_Update =
 {
 	// printf("csqc ent update %f\n", isnew);
@@ -236,7 +238,14 @@ void(float width, float height, float menushown) CSQC_UpdateView =
 	
 	// draw_sun();
 	
-	draw_hud();
+	if (damage_amount > 0)
+	{
+		drawfill([0, 0], [g_width, g_height], '0.8 0.1 0.05', sin(time * 8) * (damage_amount / 100) * 0.1, 0);
+		drawfill([0, 0], [g_width, g_height], '1 0.1 0.05', damage_amount / 100, 1);	
+		damage_amount -= frametime * 5;
+	}
+	
+	draw_hud(viewmodel, 1 - (current_fov/normalfov));
 	
 	
 	
@@ -333,6 +342,9 @@ void() CSQC_Parse_Event =
 			setmodel(viewmodel_mzl, get_muzzleflash_model(guntype));
 			viewmodel.frame = 0;
 			gunchange_time = 0.6;
+			break;
+		case EVENT_DAMAGE:
+			damage_amount += readbyte();
 			break;
 		default:
 			printf("No action for byte %f\n", first);
