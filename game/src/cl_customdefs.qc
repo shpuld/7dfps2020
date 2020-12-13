@@ -51,6 +51,9 @@ float ctrl_held;
 
 float current_gun;
 
+float music_playing;
+float music_stop_time;
+
 vector() readvector =
 {
 	vector r = '0 0 0';

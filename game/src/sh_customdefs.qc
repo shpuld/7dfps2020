@@ -18,6 +18,8 @@ const float EVENT_SETGUN = 4;
 const float EVENT_DAMAGE = 5;
 const float EVENT_SYNC_TEAM = 6;
 const float EVENT_SYNC_RECRUITABLES = 7;
+const float EVENT_MUSIC_START = 8;
+const float EVENT_MUSIC_STOP = 9;
 
 
 const float WEP_PISTOL = 1;

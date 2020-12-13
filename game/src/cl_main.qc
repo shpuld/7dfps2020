@@ -173,6 +173,8 @@ noref void(float apiver, string enginename, float enginever) CSQC_Init =
 	// viewmodel.predraw = viewmodel_draw;
 	
 	set_menu(MENU_TEAM);
+	
+	cvar_set("musicvolume", 0);
 };
 
 noref void() CSQC_WorldLoaded =
@@ -252,6 +254,19 @@ void(float width, float height, float menushown) CSQC_UpdateView =
 	
 	draw_hud(viewmodel, 1 - (current_fov/normalfov));
 	
+	float targetmusicvol = music_playing ? cvar("musicvolumegame") : 0;
+	float realmusicvol = cvar("musicvolume");
+	if (realmusicvol <= targetmusicvol)
+	{
+		realmusicvol = min(targetmusicvol, realmusicvol + frametime * 0.3 * cvar("musicvolumegame"));
+		cvar_set("musicvolume", ftos(realmusicvol));
+	}
+	else if (time > music_stop_time && !music_playing)
+	{
+		realmusicvol = max(targetmusicvol, realmusicvol - frametime * 0.2 * cvar("musicvolumegame"));
+		cvar_set("musicvolume", ftos(realmusicvol));
+	}
+	
 	sui_begin(g_width, g_height);
 
 	draw_menu();
@@ -259,6 +274,7 @@ void(float width, float height, float menushown) CSQC_UpdateView =
 	cl_editor_draw();
 	
 	sui_end();
+	
 };
 
 float(string cmd) CSQC_ConsoleCommand =
@@ -386,6 +402,14 @@ void() CSQC_Parse_Event =
 			break;
 		case EVENT_SYNC_RECRUITABLES:
 			parse_recruitables();
+			break;
+		case EVENT_MUSIC_START:
+			localcmd("media_add sound/action_song.oga\n");
+			music_playing = TRUE;
+			break;
+		case EVENT_MUSIC_STOP:
+			music_playing = FALSE;
+			music_stop_time = time + 3;
 			break;
 		default:
 			printf("No action for byte %f\n", first);

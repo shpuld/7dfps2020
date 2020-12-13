@@ -7,7 +7,11 @@ float num_hostile_enemies;
 void() add_hostile_enemy =
 {
 	if (num_hostile_enemies == 0)
-		localcmd("media_add sound/action_song.oga\n");
+	{
+		BeginEvent(EVENT_MUSIC_START);
+		multicast('0 0 0', MULTICAST_ALL_R);
+	}
+	// localcmd("media_add sound/action_song.oga\n");
 	num_hostile_enemies += 1;
 	printf("hostile enemies %.0f\n", num_hostile_enemies);
 }
@@ -19,7 +23,11 @@ void() remove_hostile_enemy =
 	printf("hostile enemies %.0f\n", num_hostile_enemies);
 	
 	if (num_hostile_enemies == 0)
-		localcmd("media_remove sound/action_song.oga\n");
+	{
+		BeginEvent(EVENT_MUSIC_STOP);
+		multicast('0 0 0', MULTICAST_ALL_R);
+	}
+	// localcmd("media_remove sound/action_song.oga\n");
 }
 
 void() misc_barrel =
