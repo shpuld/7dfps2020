@@ -433,8 +433,8 @@ void() PutClientInServer =
 {
 	player_chain_add(self);
 	// PlayerSpawn();
-	send_team(self);
-	send_recruitables(self);
+	send_team(self, FALSE);
+	send_recruitables(self, FALSE);
 	
 };
 
@@ -484,8 +484,8 @@ void(string command_string) SV_ParseClientCommand =
 				copy_soldier(&(player_team[i]), &(recruitable[target]));
 				credits -= recruitable[target]->cost;
 				zero_soldier(&(recruitable[target]));
-				send_team(self);
-				send_recruitables(self);
+				send_team(self, TRUE);
+				send_recruitables(self, TRUE);
 				return;
 			}
 		}

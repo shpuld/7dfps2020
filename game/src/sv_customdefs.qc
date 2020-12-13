@@ -151,7 +151,7 @@ void(soldier* guy) MulticastSoldier =
 	MulticastShort(guy->cost);
 }
 
-void(entity to_whom) send_team =
+void(entity to_whom, float broadcast) send_team =
 {
 	msg_entity = to_whom;
 	BeginEvent(EVENT_SYNC_TEAM);
@@ -160,10 +160,13 @@ void(entity to_whom) send_team =
 	{
 		MulticastSoldier(&(player_team[i]));
 	}
-	multicast('0 0 0', MULTICAST_ONE_R);
+	if (broadcast)
+		multicast('0 0 0', MULTICAST_ALL_R);
+	else
+		multicast('0 0 0', MULTICAST_ONE_R);
 }
 
-void(entity to_whom) send_recruitables =
+void(entity to_whom, float broadcast) send_recruitables =
 {
 	msg_entity = to_whom;
 	BeginEvent(EVENT_SYNC_RECRUITABLES);
@@ -172,7 +175,10 @@ void(entity to_whom) send_recruitables =
 	{
 		MulticastSoldier(&(recruitable[i]));
 	}
-	multicast('0 0 0', MULTICAST_ONE_R);
+	if (broadcast)
+		multicast('0 0 0', MULTICAST_ALL_R);
+	else
+		multicast('0 0 0', MULTICAST_ONE_R);
 }
 
 
