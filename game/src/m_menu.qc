@@ -297,12 +297,12 @@ void() main_menu =
 {
 	sui_set_align([SUI_ALIGN_CENTER, SUI_ALIGN_START]);
 	float ypos = 32;
-	sui_text([0, ypos], MENU_TEXT_MEDIUM, "Sui Template", [1, 1, 1], 1, 0);
-	ypos += 16;
-	sui_text([0, ypos], MENU_TEXT_SMALL, "v2", [1, 1, 1], 1, 0);
+	sui_text([0, ypos], MENU_TEXT_MEDIUM, "Sands of Liberty", [1, 1, 1], 1, 0);
+	ypos += 24;
+	sui_text([0, ypos], MENU_TEXT_SMALL, "7DFPS & PROCJAM 2020", [1, 1, 1], 1, 0);
 	ypos += 16;
 	
-	sui_text([0, ypos], MENU_TEXT_SMALL, "By Shp", [1, 1, 1], 1, 0);
+	sui_text([0, ypos], MENU_TEXT_SMALL, "By Shp and Leonovsky75", [1, 1, 1], 1, 0);
 	ypos += 32;
 	sui_text([0, ypos], MENU_TEXT_SMALL, "Check SETTINGS for Controls!", [1, 1, 1], 1, 0);
 	
