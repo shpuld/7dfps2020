@@ -357,6 +357,7 @@ gl_FragColor = col;
 #endif
 
 //entity modifiers
+	gl_FragColor.rgb *= w_user[0].rgb;
 	gl_FragColor = gl_FragColor * e_colourident;
 
 #if defined(MASK)

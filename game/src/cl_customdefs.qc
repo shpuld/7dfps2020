@@ -1,11 +1,10 @@
 //Various globals that are used in this FTEQW example are defined here, they are not used by the engine itself
 
-
-vector MENU_BG = '0.2 0.3 0.4';
-vector MENU_BG_DARK = '0.1 0.15 0.2';
-vector MENU_BORDER = '0.3 0.4 0.5';
-vector MENU_BUTTON = '0.3 0.4 0.5';
-vector MENU_BUTTON_BORDER = '0.35 0.45 0.55';
+vector MENU_BG = '0 0.15 0.1';
+vector MENU_BG_DARK = '0 0.1 0';
+vector MENU_BORDER = '0 0.3 0.2';
+vector MENU_BUTTON = '0 0.3 0.2';
+vector MENU_BUTTON_BORDER = '0 0.4 0.25';
 vector MENU_TEXT_1 = '1 1 1';
 vector MENU_TEXT_2 = '0.7 0.75 0.75';
 vector MENU_HIGHLIGHT = '1 1 1';
@@ -27,6 +26,7 @@ const float MENU_NONE = 0;
 const float MENU_BRIEFING = 1;
 const float MENU_PICK = 2;
 const float MENU_TEAM = 3;
+const float MENU_DEPLOYING = 4;
 
 // for keybinding
 float active_bind_index;
@@ -53,6 +53,34 @@ float current_gun;
 
 float music_playing;
 float music_stop_time;
+
+float die_time;
+float complete_time;
+
+string character_name;
+
+float hack_done;
+float hack_total;
+float hack_time;
+
+float damage_amount;
+float show_objective_time;
+float old_objectives_completed;
+
+float holding_fire;
+
+entity start_timer;
+
+string() objective_text =
+{
+	switch (getstatf(STAT_OBJ_MODE))
+	{
+	case OBJ_ELIMINATION: return "Eliminate hostiles %.0f/%.0f";
+	case OBJ_ARTIFACT: return "Secure artifacts %.0f/%.0f";
+	case OBJ_COMMS: return "Hack comms towers %.0f/%.0f";
+	default: return "Completed %.0f/%.0f";
+	}
+}
 
 vector() readvector =
 {

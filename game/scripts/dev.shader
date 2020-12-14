@@ -234,11 +234,59 @@ textures/dev/ground2
 	}
 }
 
+textures/dev/rock
+{
+	{
+		program glsl/bspsurf.glsl
+		map $nearest:textures/dev/rock.tga
+	}
+}
+
+textures/dev/concrete
+{
+	{
+		program glsl/bspsurf.glsl
+		map $nearest:textures/dev/concrete.tga
+	}
+}
+
+textures/dev/metal
+{
+	{
+		program glsl/bspsurf.glsl
+		map $nearest:textures/dev/metal.tga
+	}
+}
+
+textures/dev/car
+{
+	{
+		program glsl/bspsurf.glsl
+		map $nearest:textures/dev/car.tga
+	}
+}
+
 alien
 {
 	{
 		program glsl/defaultskin2.glsl
 		map $nearest:models/alien.png
+	}
+}
+
+comm
+{
+	{
+		program glsl/defaultskin2.glsl
+		map $nearest:models/comm
+	}
+}
+
+artifact
+{
+	{
+		map $nearest:models/artifact
+		rgbGen wave triangle 0.8 0.2 0 1
 	}
 }
 
@@ -256,6 +304,14 @@ ak
 	{
 		program glsl/defaultskin2.glsl
 		map $nearest:models/ak
+	}
+}
+
+dmr
+{
+	{
+		program glsl/defaultskin2.glsl
+		map $nearest:models/dmr
 	}
 }
 
@@ -280,6 +336,7 @@ usp
 skysky
 {
 	{
+		program glsl/sky.glsl
 		map $nearest:textures/dev/skysky.tga
 	}
 }
@@ -339,5 +396,29 @@ textures/heart
 		map $nearest:textures/heart
 		alphafunc GE128
 		blendfunc blend
+	}
+}
+
+room
+{
+	{
+		map $nearest:models/room
+	}
+}
+
+screen
+{
+	{
+		map $nearest:models/screen
+		blendfunc add
+		rgbGen wave triangle 0.7 0.04 0 10
+	}
+}
+
+glow
+{
+	{
+		map $nearest:models/glow
+		blendfunc add
 	}
 }

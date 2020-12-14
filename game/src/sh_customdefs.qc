@@ -10,6 +10,11 @@ const float STAT_MAGAZINE = 54;
 const float STAT_RESERVE = 55;
 const float STAT_CREDITS = 56;
 const float STAT_SPEED = 57;
+const float STAT_NUM_OBJS = 58;
+const float STAT_OBJS_COMPLETED = 59;
+const float STAT_OBJ_MODE = 60;
+const float STAT_MAX_HEALTH = 61;
+const float STAT_MISSION_NUM = 62;
 
 const float EVENT_RECOIL = 1;
 const float EVENT_RELOAD = 2;
@@ -20,12 +25,23 @@ const float EVENT_SYNC_TEAM = 6;
 const float EVENT_SYNC_RECRUITABLES = 7;
 const float EVENT_MUSIC_START = 8;
 const float EVENT_MUSIC_STOP = 9;
+const float EVENT_DIE = 10;
+const float EVENT_COMPLETE = 11;
+const float EVENT_COMMS_UPDATE = 12;
 
+const float OBJ_ELIMINATION = 0;
+const float OBJ_COMMS = 1;
+const float OBJ_ARTIFACT = 2;
 
 const float WEP_PISTOL = 1;
 const float WEP_AK = 2;
 const float WEP_MP5 = 3;
 const float WEP_RIFLE = 4;
+
+float(float missionnum) is_night =
+{
+	return !((missionnum + 1) % 3);
+}
 
 float(float type) get_aim_inaccuracy =
 {
@@ -106,7 +122,7 @@ string(float type) get_fire_sound =
 	case WEP_PISTOL: return "sound/pistol.wav";
 	case WEP_AK: return "sound/ak.wav";
 	case WEP_MP5: return "sound/mp5.wav";
-	case WEP_RIFLE: return "sound/ak.wav";
+	case WEP_RIFLE: return "sound/dmr.wav";
 	default: return "";
 	}
 }
@@ -146,7 +162,7 @@ string(float type) get_gun_model =
 	case WEP_PISTOL: return "models/pistol.iqm";
 	case WEP_AK: return "models/ak.iqm";
 	case WEP_MP5: return "models/mp5.iqm";
-	case WEP_RIFLE: return "models/ak.iqm";
+	case WEP_RIFLE: return "models/dmr.iqm";
 	default: return "models/ak.iqm";
 	}
 }
@@ -185,7 +201,7 @@ float(float type) get_magazine =
 	case WEP_MP5: return 30;
 	case WEP_RIFLE: return 10;
 	default: return 0;
-	}	
+	}
 }
 
 float(float type) get_reserve =
@@ -197,7 +213,7 @@ float(float type) get_reserve =
 	case WEP_MP5: return 90;
 	case WEP_RIFLE: return 30;
 	default: return 0;
-	}	
+	}
 }
 
 
@@ -210,6 +226,7 @@ struct soldier {
 	float weapontype;
 	float cost;
 	entity player;
+	float playernum;
 };
 
 soldier player_team[8];
@@ -307,7 +324,7 @@ string lastnames[] =  {
 	"Biggs",
 	"Christin",
 	"Jensen",
-	"Adam",
+	"Angler",
 	"Wetriver",
 	"Kickelberg",
 	"Poisson",
@@ -323,7 +340,7 @@ string lastnames[] =  {
 	"Hadaka",
 	"Pelvis",
 	"Campbell",
-	"Redifer",
+	"Black",
 	"Gentleman",
 	"Butte",
 	"Denton",
@@ -340,7 +357,14 @@ string lastnames[] =  {
 	"Scott",
 	"Winters",
 	"Standing",
-	"Powers"
+	"Powers",
+	"Plemora",
+	"Soycaf",
+	"Orange",
+	"Nyquist",
+	"Harold",
+	"Stephens",
+	"Wilson"
 };
 
 string(soldier* guy) soldier_name =
@@ -363,6 +387,7 @@ void() precache_everything =
 	precache_sound("sound/ak.wav");
 	precache_sound("sound/mp5.wav");
 	precache_sound("sound/pistol.wav");
+	precache_sound("sound/dmr.wav");
 	precache_sound("sound/ak_charge.wav");
 	precache_sound("sound/pistol_charge.wav");
 	precache_sound("sound/ak_reload.wav");
@@ -375,6 +400,12 @@ void() precache_everything =
 	precache_sound("sound/alienbullethit.wav");
 	precache_sound("sound/deathjingle.wav");
 	precache_sound("sound/switch.wav");
+	precache_sound("sound/empty.wav");
+	
+	precache_sound("sound/ambient1.wav");
+	precache_sound("sound/ambient2.wav");
+	precache_sound("sound/ambient3.wav");
+	precache_sound("sound/ambient4.wav");
 	
 	precache_sound("sound/hurt1.wav");
 	precache_sound("sound/hurt2.wav");
@@ -405,6 +436,15 @@ void() precache_everything =
 	precache_sound("sound/spotted4.wav");
 	precache_sound("sound/spotted5.wav");
 	precache_sound("sound/spotted6.wav");
+	
+	precache_sound("sound/step1.wav");
+	precache_sound("sound/step2.wav");
+	precache_sound("sound/step3.wav");
+	precache_sound("sound/step4.wav");
+	precache_sound("sound/step5.wav");
+	precache_sound("sound/step6.wav");
+	precache_sound("sound/step7.wav");
+
 
 	precache_model("models/testplayer.iqm");
 	precache_model("models/alien.iqm");
@@ -413,11 +453,15 @@ void() precache_everything =
 	precache_model("models/bullet.iqm");
 	precache_model("models/alienbullet.iqm");
 	precache_model("models/ak.iqm");
+	precache_model("models/dmr.iqm");
 	precache_model("models/pistol.iqm");
 	precache_model("models/ak_mzl.iqm");
 	precache_model("models/mp5.iqm");
 	precache_model("models/mp5_mzl.iqm");
 	precache_model("models/pistol_mzl.iqm");
+	precache_model("models/room.iqm");
+	precache_model("models/comm.iqm");
+	precache_model("models/artifact.iqm");
 	
 	particleeffectnum("weapons.alienblood");
 	particleeffectnum("weapons.bullethit");

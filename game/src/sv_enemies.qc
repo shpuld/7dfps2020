@@ -13,14 +13,14 @@ void() add_hostile_enemy =
 	}
 	// localcmd("media_add sound/action_song.oga\n");
 	num_hostile_enemies += 1;
-	printf("hostile enemies %.0f\n", num_hostile_enemies);
+	// printf("hostile enemies %.0f\n", num_hostile_enemies);
 }
 
 void() remove_hostile_enemy =
 {
 	
 	num_hostile_enemies -= 1;
-	printf("hostile enemies %.0f\n", num_hostile_enemies);
+	// printf("hostile enemies %.0f\n", num_hostile_enemies);
 	
 	if (num_hostile_enemies == 0)
 	{
@@ -50,8 +50,12 @@ void() alienbullet_touch =
 	sound(self, CHAN_AUTO, "sound/alienbullethit.wav", 0.4 + random() * 0.3, 0.8, 90 + random() * 16);
 	sound_variation(self, CHAN_AUTO, "sound/rico%.0f.wav", 3, 0.9 + random() * 0.3, 0.7);
 	
-	if (other.classname == "player")
-		damage(other, 12 + rint(random() * 15), self.velocity, self.owner);
+	if (other.classname == "player" && !mission_completed)
+	{
+		float dmg = 15 + random() * 12;
+		dmg = rint(dmg * (0.24 + (cvar("skill") * 0.35)));
+		damage(other, dmg, self.velocity, self.owner);
+	}
 	remove(self);
 }
 
@@ -80,7 +84,7 @@ const float ANIM_DIE = 9;
 .float last_sound;
 
 const float AGGRO_DIST = 2000;
-const float AGGRO_DOT = 0.4;
+const float AGGRO_DOT = 0.3;
 
 float(entity target) can_see =
 {
@@ -113,13 +117,14 @@ float(float dist) move_forward =
 
 entity() find_enemy =
 {
+	float aggrodist = is_night(mission_number) ? AGGRO_DIST * 0.7 : AGGRO_DIST;
 	for (entity head = player_chain_head; head; head = head.player_chain_next)
 	{
 		vector to_player = head.origin - self.origin;
 		float dist = AGGRO_DIST;
 		if (self.alert_state == ALERT_NONE) dist *= 0.5;
 		if (head.dead) continue;
-		if (vlen(to_player) > AGGRO_DIST) continue;
+		if (vlen(to_player) > aggrodist) continue;
 		makevectors(self.angles);
 		if (normalize(to_player) * v_forward < AGGRO_DOT) continue;
 		if (!can_see(head)) continue;
@@ -138,7 +143,7 @@ void(entity e, entity player) spot_enemy =
 	if (self.alert_state != ALERT_HOSTILE)
 		add_hostile_enemy();
 	e.alert_state = ALERT_HOSTILE;
-	e.attack_finished = time + 1;
+	e.attack_finished = time + 1.2 - cvar("skill") * 0.15;
 	e.enemy = player;
 	// e.frame = ANIM_IDLE_ALERT;
 };
@@ -257,7 +262,11 @@ void() enemy_think =
 			}
 			if (r > 0.85)
 			{
-				self.targetpos = find_enemy().origin;
+				entity enm = find_enemy();
+				if (enm && vlen(enm.origin) > 400)
+					self.targetpos = enm.origin;
+				else
+					self.ideal_yaw = random() * 360;
 			}
 		}
 	}
@@ -330,19 +339,27 @@ void() enemy_think =
 			
 			if (time > (self.next_move - 3))
 			{
-				move_forward(20);
-				moving = TRUE;
+				if (vlen(to_target) > 90)
+				{
+					move_forward(20);
+					moving = TRUE;
+				}
+				else
+				{
+					self.next_move -= 0.05;
+				}
 				if (time > self.next_move)
 				{
 					self.next_move = time + 4;
-					if (vlen(to_target) < 150)
+					if (vlen(to_target) < 180)
 						self.next_move += 2;
 				}
 			}
 			else
 			{
-				if (time > self.attack_finished)
+				if (time > self.attack_finished && angle_diff(self.angles_y, self.ideal_yaw) < 25)
 				{
+					
 					vector aimpos = self.targetpos + [self.enemy.velocity.x, self.enemy.velocity.y] * 0.2;
 					vector fwd = normalize(aimpos - (self.origin + '0 0 42'));
 					entity bull = spawn();
@@ -460,6 +477,11 @@ void(float amount, vector dir, entity dealer) enemy_die =
 	sound_variation(self, CHAN_VOICE, "sound/die%.0f.wav", 5, 1, 0.8);
 	if (self.alert_state == ALERT_HOSTILE)
 		remove_hostile_enemy();
+	
+	if (objective_mode == OBJ_ELIMINATION)
+		objectives_completed += 1;
+	
+	credits += 50 + min(5 - cvar("skill"), 0) * 50;
 }
 
 

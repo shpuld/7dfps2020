@@ -152,6 +152,51 @@ void(float amount, vector dir, entity dealer) player_hurt =
 	multicast('0 0 0', MULTICAST_ONE_R);
 }
 
+void() remove_soldier =
+{
+	for (int i = 0; i < player_team.length; i++)
+	{
+		if (player_team[i].player == self)
+		{
+			zero_soldier(&(player_team[i]));
+			send_team(self, TRUE);
+		}
+	}
+}
+
+void() restart_server =
+{
+	// new recruitables
+	for (int i = 0; i < recruitable.length; i++)
+		zero_soldier(&(recruitable[i]));
+	float howmany = 1 + rint(random() * 2);
+	for (int i = 0; i < howmany; i++)
+		randomize_soldier(&(recruitable[i]), floor(random() * 7));
+		
+	mission_number += 1;
+
+	for (int i = 0; i < player_team.length; i++)
+	{
+		if (player_team[i].player)
+			level_up_soldier(&(player_team[i]));
+	}
+
+
+	save_game();
+
+	localcmd("restart\n");
+}
+
+void() restart_server_nosave =
+{
+	localcmd("restart\n");
+}
+
+void() close_server =
+{
+	localcmd("disconnect\n");
+}
+
 void(float amount, vector dir, entity dealer) player_die =
 {
 	BeginEvent(EVENT_DAMAGE);
@@ -166,7 +211,26 @@ void(float amount, vector dir, entity dealer) player_die =
 	self.dead = TRUE;
 	self.health = -1;
 	
-	sound(self, CHAN_AUTO, "sound/deathjingle.wav", 0.9, 0);
+	msg_entity = self;
+	BeginEvent(EVENT_DIE);
+	multicast('0 0 0', MULTICAST_ONE_R);
+	// sound(self, CHAN_AUTO, "sound/deathjingle.wav", 1.0, 0);
+	
+	remove_soldier();
+	save_game();
+	
+	float all_dead = TRUE;
+	for (int i = 0; i < player_team.length; i++)
+	{
+		if (player_team[i].firstname != "") all_dead = FALSE;
+	}
+	if (all_dead)
+	{
+		delete_save();
+		self.nextthink = time + 5;
+		self.think = close_server;
+	}
+	
 }
 
 entity(entity bullet) clone_bullet =
@@ -213,7 +277,7 @@ void() bullet_touch =
 		if (ratio > 0.85) dmg_multi = 2.0;
 		if (ratio < 0.5) dmg_multi = 0.5;
 		dmg_multi += (self.owner.accuracy - 2) * 0.05;
-		printf("damage multi %f, %f\n", dmg_multi, self.accuracy);
+		// printf("damage multi %f, %f\n", dmg_multi, self.accuracy);
 		// printf("ratio %f, multiplier %f\n", ratio, dmg_multi);
 		damage(other, get_damage(self.weapontype) * dmg_multi, self.velocity, self.owner);
 		// damage(other, 0.1 * dmg_multi, self.velocity, self.owner);
@@ -240,6 +304,7 @@ entity(entity shooter, vector pos, vector dir) bullet_spawn =
 	setsize(bullet, '0 0 0', '0 0 0');
 	bullet.movetype = MOVETYPE_TOSS;
 	bullet.velocity = normalize(dir) * 10000;  
+	if (shooter.weapontype == WEP_RIFLE) bullet.velocity *= 1.5;
 	bullet.solid = SOLID_BBOX;
 	bullet.angles = vectoangles(dir);
 	bullet.angles_z = random() * 360;
@@ -313,14 +378,64 @@ void() finish_chambering =
 
 void() PlayerPreThink =
 {	
-	CheckImpulses();
-	makevectors(self.v_angle);
-
-	if (self.dead)
+	if (self.dead || mission_completed)
 	{
 		return;
 	}
-		
+	
+	CheckImpulses();
+	makevectors(self.v_angle);
+	
+	if (num_objectives == objectives_completed)
+	{
+		if (vlen(self.origin) < 200)
+		{
+			BeginEvent(EVENT_COMPLETE);
+			multicast('0 0 0', MULTICAST_ALL_R);
+			mission_completed = TRUE;
+			self.takes_damage = FALSE;
+			self.nextthink = time + 5;
+			self.think = restart_server;
+			credits += 750;
+			return;
+		}
+	}
+	
+	float reserve_min = get_reserve(self.weapontype) - get_magazine(self.weapontype);
+	if (self.reserve < reserve_min)
+	{
+		if (vlen(self.origin) < 200)
+		{
+			self.reserve = reserve_min;
+			sound(self, CHAN_AUTO, "sound/switch.wav", 0.8, 1.0);
+		}
+	}
+	
+	if (objective_mode == OBJ_COMMS && time > self.attack_finished)
+	{
+		traceline(self.origin + self.view_ofs, self.origin + self.view_ofs + v_forward * 64, 0, self);
+		if (trace_ent.classname == "comms_tower")
+		{
+			if (self.button0 && trace_ent.health > 0)
+			{
+				// printf("%f\n", trace_ent.health);
+				trace_ent.health--;
+				
+				if (trace_ent.health <= 0)
+				{
+					credits += 250;
+					objectives_completed += 1;
+				}
+			}
+			BeginEvent(EVENT_COMMS_UPDATE);
+			MulticastByte(trace_ent.health);
+			MulticastByte(trace_ent.max_health);
+			multicast('0 0 0', MULTICAST_ONE_R);
+			self.attack_finished = time + 0.3;
+			return;
+		}
+	}
+
 	// Attack
 	if (time > self.attack_finished)
 	{
@@ -333,9 +448,14 @@ void() PlayerPreThink =
 				msg_entity = self;
 				multicast('0 0 0', MULTICAST_ONE);
 				sound(self, CHAN_AUTO, get_charge_sound(self.weapontype), 0.8, 1, 95 + random() * 5);
-				self.attack_finished = time + 0.5;
-				self.nextthink = time + 0.4;
+				self.attack_finished = time + 0.4;
+				self.nextthink = time + 0.35;
 				self.think = finish_chambering;
+			}
+			else if (self.button0)
+			{
+				sound(self, CHAN_AUTO, "sound/empty.wav", 0.6, 1);
+				self.attack_finished = time + 0.35;
 			}
 		}
 		if (self.button0 && self.chambered)
@@ -402,11 +522,21 @@ void(float soldier) PlayerSpawn =
 	setmodel(self, "models/alien.iqm");
 	self.movetype = MOVETYPE_WALK;
 	self.health = 70 + 5 * player_team[soldier]->vitality;
-	setorigin(self, get_spawn_point());
-	self.angles = find(world, classname, "info_player_start").angles;
-	self.angles_x = 24;
-	self.fixangle = TRUE;
+	self.max_health = self.health;
 	setsize(self, [-16, -16, 0], [16, 16, STANDING_HEIGHT]);
+	setorigin(self, get_spawn_point());
+	for (int i = 0; i < 100; i++)
+	{
+		vector pos = get_spawn_point() + [random() * 256, random() * 256];
+		tracebox(pos, self.mins, self.maxs, pos - '0 0 2000', 0, self);
+		if (trace_plane_normal.z > 0.7 && trace_endpos.z < 64)
+		{
+			setorigin(self, trace_endpos);
+			break;
+		}
+	}
+	self.angles = find(world, classname, "info_player_start").angles;
+	self.fixangle = TRUE;
 	self.view_ofs = [0, 0, STANDING_VIEWOFS];
 	self.hurt = player_hurt;
 	self.die = player_die;
@@ -425,6 +555,9 @@ void(float soldier) PlayerSpawn =
 	self.speed = player_team[soldier]->speed;
 	self.accuracy = player_team[soldier]->accuracy;
 	
+	player_team[soldier]->player = self;
+	send_team(self, TRUE);
+	
 	localcmd("media_remove sound/action_song.oga\n");
 	// localcmd("media_add sound/action_song.oga\n");
 };
@@ -432,10 +565,10 @@ void(float soldier) PlayerSpawn =
 void() PutClientInServer =
 {
 	player_chain_add(self);
+	self.dead = TRUE;
 	// PlayerSpawn();
 	send_team(self, FALSE);
 	send_recruitables(self, FALSE);
-	
 };
 
 void() ClientDisconnect =
@@ -494,7 +627,12 @@ void(string command_string) SV_ParseClientCommand =
 		if (argc < 2) return;
 		float soldier = stof(argv(1));
 		PlayerSpawn(soldier);	
-		break;
+		return;
+	case "quit":
+		save_game();
+		// fixme
+		localcmd("disconnect\n");
+		return;
 	default: break;
 	}
 	clientcommand(self, command_string);
@@ -532,8 +670,21 @@ void() SV_RunClientCommand =
 	}
 	else
 		self.view_ofs_z = min(STANDING_VIEWOFS, self.view_ofs_z + input_timelength * 180);
-			
+	
+	vector oldpos = self.origin;
 	runstandardplayerphysics(self);
+	
+	if (self.flags & FL_ONGROUND)
+	{
+		self.footstep_time += vlen(oldpos - self.origin);
+		if (self.footstep_time > 70)
+		{
+			// sound(self, CHAN_AUTO, "sound/empty.wav", 1, 1);
+			sound_variation(self, CHAN_AUTO, "sound/step%.0f.wav", 7, 0.1, 1.5);
+			self.footstep_time = 0;
+		}
+	}
+	else self.footstep_time = 100;
 
 	makevectors([0, self.angles_y, 0]);
 	

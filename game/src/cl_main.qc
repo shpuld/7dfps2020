@@ -4,11 +4,9 @@ void() CSQC_Ent_Remove =
 	remove(self);
 };
 
-void() CSQC_Shutdown =
-{
-};
 
 entity skybox;
+entity briefingroom;
 entity viewmodel;
 entity viewmodel_mzl;
 float normalfov;
@@ -147,6 +145,34 @@ void() draw_crosshair =
 	*/
 };
 
+void() draw_scope =
+{
+	float aiming = getstatf(STAT_AIMING);
+	if (aiming) aiming_lerp = min(1, aiming_lerp + frametime * 12);
+	else aiming_lerp = max(0, aiming_lerp - frametime * 12);
+	float ofs = 8 - aiming_lerp * 5.5; // aiming_lerp * 100;
+	
+	makevectors(camang);
+	vector center = campos + v_forward * 8;
+
+	R_BeginPolygon("crosshair");
+	float segments = 8;
+	float thickness = 5;
+	float alpha = aiming_lerp * 0.6;
+	for (float i = 0; i < segments; i++)
+	{
+		float an = (i/segments) * 2 * M_PI;
+		R_PolygonVertex(center + v_up * sin(an) * (ofs + thickness) + v_right * cos(an) * (ofs + thickness), '0 0 0', '0 0 0', 0);
+		R_PolygonVertex(center + v_up * sin(an) * ofs + v_right * cos(an) * ofs, '0 0 0', '0 0 0', alpha);
+		
+		an = ((i + 1)/segments) * 2 * M_PI;
+		
+		R_PolygonVertex(center + v_up * sin(an) * ofs + v_right * cos(an) * ofs, '0 0 0', '0 0 0', alpha);
+		R_PolygonVertex(center + v_up * sin(an) * (ofs + thickness) + v_right * cos(an) * (ofs + thickness), '0 0 0', '0 0 0', 0);
+		R_EndPolygon();
+	}
+}
+
 noref void(float apiver, string enginename, float enginever) CSQC_Init =
 {
 	precache_everything();
@@ -161,6 +187,13 @@ noref void(float apiver, string enginename, float enginever) CSQC_Init =
 	registercommand("noclip");
 	skybox = spawn();
 	setmodel(skybox, "models/skybox.iqm");
+	
+	briefingroom = spawn();
+	setmodel(briefingroom, "models/room.iqm");
+	briefingroom.renderflags = RF_DEPTHHACK;
+	setorigin(briefingroom, '500 500 400');
+	briefingroom.angles = '0 180 0';
+	briefingroom.scale = 1;
 	// skybox.scale = 2;
 	
 	viewmodel = spawn();
@@ -174,7 +207,12 @@ noref void(float apiver, string enginename, float enginever) CSQC_Init =
 	
 	set_menu(MENU_TEAM);
 	
-	cvar_set("musicvolume", 0);
+	localcmd("media_remove sound/action_song.oga\n");
+	// cvar_set("musicvolume", ftos(cvar("musicvolumegame")));
+	localcmd("media_add sound/menu_song.oga\n");
+	
+	
+	start_timer = spawn();
 };
 
 noref void() CSQC_WorldLoaded =
@@ -182,7 +220,12 @@ noref void() CSQC_WorldLoaded =
 
 };
 
-float damage_amount;
+void() CSQC_Shutdown =
+{
+	localcmd("media_remove sound/action_song.oga\n");
+	// cvar_set("musicvolume", ftos(cvar("musicvolumegame")));
+	localcmd("media_add sound/menu_song.oga\n");
+}
 
 noref void(float isnew) CSQC_Ent_Update =
 {
@@ -197,6 +240,16 @@ void(float width, float height, float menushown) CSQC_UpdateView =
 	g_width = width;
 	g_height = height;
 	
+	
+	float isnight = is_night(getstatf(STAT_MISSION_NUM));
+	vector w_user[2] = { '1 1 1', '1 1 1' };
+	w_user[0] = isnight ? '0.1 0.15 0.2' : '1 1 1';
+	w_user[1] = isnight ? '0.4 0.2 0.1' : '1 1 1';
+	setproperty(VF_USERDATA, &w_user, sizeof(float) * 8i);
+	if (isnight)
+	{
+		localcmd("fog 0.04 0.09 0.1 0.14 1\n");
+	}
 	
 	//disable quake status bar and quake crosshair
 	setproperty(VF_DRAWENGINESBAR, 0);	
@@ -217,8 +270,27 @@ void(float width, float height, float menushown) CSQC_UpdateView =
 	
 	clearscene();
 	//autoadd entities received from servers for drawing
-	addentities(MASK_ENGINE);
-	addentity(viewmodel);
+	if (in_menu == MENU_NONE)
+	{
+		addentities(MASK_ENGINE);
+		if ((!getstatf(STAT_AIMING) || current_gun != WEP_RIFLE) && getstatf(STAT_HEALTH) > 0)
+			addentity(viewmodel);
+	}
+	else
+	{
+		// if (in_menu != MENU_NONE)
+		addentity(briefingroom);
+		campos = briefingroom.origin;
+		campos += '-80 0 -8';
+		campos.y += sin(time * 0.3) * 35;
+		campos.z += cos(time * 0.1) * 6;
+		camang = '0 0 0';
+		camang.y = -sin(time * 0.3) * 15;
+		setproperty(VF_ANGLES, camang);
+		setproperty(VF_ORIGIN, campos);
+		setproperty(VF_AFOV, 65);
+		SetListener(campos, '1 0 0', '0 1 0', '0 0 1');
+	}
 	
 	if (viewmodel_mzl.alpha > 0)
 	{
@@ -235,6 +307,8 @@ void(float width, float height, float menushown) CSQC_UpdateView =
 	}
 
 	draw_crosshair();
+	if (current_gun == WEP_RIFLE && getstatf(STAT_AIMING))
+		draw_scope();
 
 	setproperty(VF_ANGLES, camang);
 	setproperty(VF_ORIGIN, campos);
@@ -245,25 +319,21 @@ void(float width, float height, float menushown) CSQC_UpdateView =
 	
 	// draw_sun();
 	
-	if (damage_amount > 0)
-	{
-		drawfill([0, 0], [g_width, g_height], '0.8 0.1 0.05', sin(time * 8) * (damage_amount / 100) * 0.1, 0);
-		drawfill([0, 0], [g_width, g_height], '1 0.1 0.05', damage_amount / 100, 1);	
-		damage_amount -= frametime * 5;
-	}
-	
 	draw_hud(viewmodel, 1 - (current_fov/normalfov));
 	
+	cvar_set("sensitivity", ftos((current_fov/normalfov) * cvar("sensitivitygame")));
+	
 	float targetmusicvol = music_playing ? cvar("musicvolumegame") : 0;
+	if (in_menu == MENU_BRIEFING || in_menu == MENU_TEAM) targetmusicvol = cvar("musicvolumegame");
 	float realmusicvol = cvar("musicvolume");
 	if (realmusicvol <= targetmusicvol)
 	{
 		realmusicvol = min(targetmusicvol, realmusicvol + frametime * 0.3 * cvar("musicvolumegame"));
 		cvar_set("musicvolume", ftos(realmusicvol));
 	}
-	else if (time > music_stop_time && !music_playing)
+	else if (time > music_stop_time && !music_playing || cvar("musicvolumegame") < realmusicvol)
 	{
-		realmusicvol = max(targetmusicvol, realmusicvol - frametime * 0.2 * cvar("musicvolumegame"));
+		realmusicvol = max(targetmusicvol, realmusicvol - frametime * 0.15 * cvar("musicvolumegame"));
 		cvar_set("musicvolume", ftos(realmusicvol));
 	}
 	
@@ -339,6 +409,9 @@ void(soldier* target) parse_soldier =
 	target->vitality = readbyte();
 	target->weapontype = readbyte();
 	target->cost = readshort();
+	target->playernum = readentitynum();
+	if (target->playernum == player_localentnum)
+		character_name = soldier_name(target);
 	// printf("%s.%s\n", target->firstname, lastnames[target->lastnamei]);
 }
 
@@ -404,12 +477,24 @@ void() CSQC_Parse_Event =
 			parse_recruitables();
 			break;
 		case EVENT_MUSIC_START:
+			localcmd("media_remove sound/menu_song.oga\n");
 			localcmd("media_add sound/action_song.oga\n");
 			music_playing = TRUE;
 			break;
 		case EVENT_MUSIC_STOP:
 			music_playing = FALSE;
 			music_stop_time = time + 3;
+			break;
+		case EVENT_DIE:
+			die_time = time;
+			break;
+		case EVENT_COMPLETE:
+			complete_time = time;
+			break;
+		case EVENT_COMMS_UPDATE:
+			hack_done = readbyte();
+			hack_total = readbyte();
+			hack_time = time;
 			break;
 		default:
 			printf("No action for byte %f\n", first);

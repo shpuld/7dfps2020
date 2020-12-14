@@ -42,7 +42,7 @@ void(float own_team, vector framesize) draw_team =
 	vector col_size = [framesize.x / 2 - 4, 24 + 22 * 8 + 2 + 16];
 	sui_push_frame([0, 0], col_size);
 	
-	sui_fill([0, 0], col_size, '0 0 0', 0.5, 0);
+	sui_fill([0, 0], col_size, '0 0 0', 0.3, 0);
 
 	if (own_team)
 		sui_text([4, 4], [8, 8], "Your Team:", '1 1 1', 1, 0);
@@ -66,7 +66,7 @@ void(float own_team, vector framesize) draw_team =
 			my_button(nm, npos, [128, 20], soldier_name(guy)) ? recruitable_selected = i : 0;
 
 		if (select == i)
-			sui_fill(npos, [128, 20], '0 0 0', 0.4, 0);
+			sui_fill(npos, [128, 20], '0.5 1 0.6', 0.3, 1);
 		// sui_pop_frame();
 	}
 	soldier* selected = &(soldiers[select]);
@@ -133,11 +133,46 @@ void(float own_team, vector framesize) draw_team =
 	sui_pop_frame();
 }
 
+
+void() deploy =
+{
+	localcmd(sprintf("cmd deploy %.0f\n", team_member_selected));
+	show_objective_time = time;
+	die_time = 0;
+	damage_amount = 0;
+	set_menu(MENU_NONE);
+}
+
+string() get_mission_briefing =
+{
+	float mission_num = getstatf(STAT_MISSION_NUM);
+	float mode = getstatf(STAT_OBJ_MODE);
+	string base = "";
+	if (mission_num == 0)
+		base = "Welcome to the taskforce. \r\n\r\nYour first mission will be to \r\neliminate a small enemy patrol \r\nthat seems to have lost their \r\nplatoon. \r\n\r\nDo not underestimate the threat.\r\nEliminate them all.\r\n\r\n";
+	else if (mode == OBJ_ARTIFACT)
+		base = "We found important artifacts \r\nin an area guarded by the \r\nenemy infantry. \r\n\r\nRetrieve the artifacts.\r\n\r\n";
+	else if (mode == OBJ_COMMS)
+		base = "The enemy has set up \r\ncommunications links in the \r\nvicinity. \r\n \r\nHack all the comms towers. \r\n\r\n";
+	else if (mode == OBJ_ELIMINATION)
+		base = "An enemy patrol has been \r\nspotted near our headquarters. \r\nWe cannot risk them finding \r\nour base of operations. \r\n \r\nEliminate them all. \r\n\r\n";
+
+	if (is_night(mission_num))
+		base = strcat(base, "This is a night operation.");
+	else
+		base = strcat(base, "You'll operate at day time.");
+		
+	if (mission_num >= 13)
+		base = strcat(base, "\r\n\r\n\r\nContratulations! \r\nYou survived 13 missions!\r\n\r\nYou can keep playing\n\ror start over on higher \n\rdifficulty.");
+	
+	return base;
+}
+
 void() draw_menu =
 {
 	if (in_menu == MENU_NONE) return;
 
-	sui_fill([0, 0], [g_width, g_height], '0 0 0', 0.6, 0);
+	sui_fill([0, 0], [g_width, g_height], '0 0 0', 0.2, 0);
 
 	vector framesize = [g_width - 16, g_height - 16];
 	sui_push_frame([8, 8], framesize);
@@ -152,26 +187,59 @@ void() draw_menu =
 		draw_team(FALSE, framesize);
 		
 		sui_set_align([SUI_ALIGN_START, SUI_ALIGN_END]);
-		sui_fill([0, 0], [framesize.x, 40], '0 0 0', 0.5, 0);
-		my_button("quitmngment", [4, -4], [128, 32], "Save & Quit") ? print("save & quit not implemented yet\n") : 0;
+		sui_fill([0, 0], [framesize.x, 40], '0 0 0', 0.3, 0);
+		my_button("quitmngment", [4, -4], [128, 32], "Save & Quit") ? localcmd("cmd quit\n") : 0;
 		sui_set_align([SUI_ALIGN_END, SUI_ALIGN_END]);
 		my_button("briefing", [-4, -4], [128, 32], "Briefing") ? set_menu(MENU_BRIEFING) : 0;
 		break;
 	case MENU_BRIEFING:
 		sui_set_align([SUI_ALIGN_CENTER, SUI_ALIGN_START]);
-		sui_text([0, 0], [16, 16], "Briefing", '1 1 1', 1, 0);
+		sui_text([0, 0], [16, 16], "Next", '1 1 1', 1, 0);
+
+		draw_team(TRUE, framesize);
+		
+		sui_set_align([SUI_ALIGN_END, SUI_ALIGN_CENTER]);
+		
+		vector col_size = [framesize.x / 2 - 4, 24 + 22 * 8 + 2 + 16];
+		sui_push_frame([0, 0], col_size);
+		sui_fill([0, 0], col_size, '0 0 0', 0.3, 0);
+		float misnum = getstatf(STAT_MISSION_NUM) + 1;
+		sui_text([4, 4], [8, 8], sprintf("Mission %.0f/13", misnum), '1 1 1', 1, 0);
+		sui_text([4, 4 + 24], [8, 8], get_mission_briefing(), '1 1 1', 1, 0);
+		
+		sui_pop_frame();
+
+		sui_set_align([SUI_ALIGN_START, SUI_ALIGN_END]);
+		sui_fill([0, 0], [framesize.x, 40], '0 0 0', 0.3, 0);
+		my_button("quitbrief", [4, -4], [128, 32], "Back") ? set_menu(MENU_TEAM) : 0;
+		sui_set_align([SUI_ALIGN_END, SUI_ALIGN_END]);
+		if (my_button("deploy", [-4, -4], [128, 32], "Deploy")) 
+		{
+			start_timer.nextthink = time + 2.5;
+			start_timer.think = deploy;
+			set_menu(MENU_DEPLOYING);
+		}
+		break;
+	case MENU_PICK:
+		sui_set_align([SUI_ALIGN_CENTER, SUI_ALIGN_START]);
+		sui_text([0, 0], [16, 16], "Pick another soldier", '1 1 1', 1, 0);
 
 		draw_team(TRUE, framesize);
 
 		sui_set_align([SUI_ALIGN_START, SUI_ALIGN_END]);
-		sui_fill([0, 0], [framesize.x, 40], '0 0 0', 0.5, 0);
-		my_button("quitmngment", [4, -4], [128, 32], "Save & Quit") ? print("save & quit not implemented yet\n") : 0;
+		sui_fill([0, 0], [framesize.x, 40], '0 0 0', 0.3, 0);
+		my_button("quitmission", [4, -4], [128, 32], "Save & Quit") ? localcmd("cmd quit\n") : 0;
 		sui_set_align([SUI_ALIGN_END, SUI_ALIGN_END]);
-		if (my_button("deploy", [-4, -4], [128, 32], "Deploy")) 
+		if (my_button("cont", [-4, -4], [128, 32], "Deploy")) 
 		{
-			localcmd(sprintf("cmd deploy %.0f\n", team_member_selected));
-			set_menu(MENU_NONE);
+			start_timer.nextthink = time + 2.5;
+			start_timer.think = deploy;
+			set_menu(MENU_DEPLOYING);
 		}
+		break;
+	case MENU_DEPLOYING:
+		sui_set_align([SUI_ALIGN_CENTER, SUI_ALIGN_CENTER]);
+		sui_text([0, 0], [16, 16], "Deploying", '1 1 1', 1, 0);
 		break;
 	default: break;
 	}

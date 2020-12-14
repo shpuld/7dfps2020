@@ -1,9 +1,9 @@
 
-vector MENU_BG = '0.2 0.3 0.4';
-vector MENU_BG_DARK = '0.1 0.15 0.2';
-vector MENU_BORDER = '0.3 0.4 0.5';
-vector MENU_BUTTON = '0.3 0.4 0.5';
-vector MENU_BUTTON_BORDER = '0.35 0.45 0.55';
+vector MENU_BG = '0 0.15 0.1';
+vector MENU_BG_DARK = '0 0.1 0';
+vector MENU_BORDER = '0 0.3 0.2';
+vector MENU_BUTTON = '0 0.3 0.2';
+vector MENU_BUTTON_BORDER = '0 0.4 0.25';
 vector MENU_TEXT_1 = '1 1 1';
 vector MENU_TEXT_2 = '0.7 0.75 0.75';
 vector MENU_HIGHLIGHT = '1 1 1';
@@ -119,13 +119,17 @@ struct name_command {
 
 name_command bindlist[] = 
 {
+	{ "Attack", "+attack" },
+	{ "Aim", "+button3" },
+	{ "Jump", "+jump" },
+	{ "Crouch", "+button4" },
+	{ "Reload", "impulse 10" },
+	{ "Switch weapon", "impulse 11" },
 	{ "Forward", "+forward" },
 	{ "Back", "+back" },
 	{ "Left", "+moveleft" },
 	{ "Right", "+moveright" },
-	{ "Jump", "+jump" },
-	{ "Attack", "+attack" },
-	{ "Secondary", "+button3" }
+	
 };
 
 void(string id, vector pos, vector size, string name, string command) bind_button =
@@ -170,7 +174,7 @@ void() settings_menu =
 {
 	was_in_options = TRUE;
 	vector pos = [0, 0];
-	vector size = [380, 280];
+	vector size = [420, 280];
 	
 	sui_push_frame(pos, size);
 
@@ -191,7 +195,7 @@ void() settings_menu =
 	bind_list("bindlist", [xpos, ypos], [width, 160], binds_scroll);
 	ypos += 160 + 8;
 
-	cvar_slider([xpos, ypos], [width, 32], [0.1, 10], "sensitivity", "Sensitivity", "%.2f");
+	cvar_slider([xpos, ypos], [width, 32], [0.1, 10], "sensitivitygame", "Sensitivity", "%.2f");
 	ypos += 32;
 
 	ypos = 32;
@@ -210,6 +214,11 @@ void() settings_menu =
 	ypos += 24;
 	sui_text([xpos, ypos], MENU_TEXT_SMALL, "Window can be resized.", MENU_TEXT_1, 0.8, 0);
 	ypos += 16;
+	if (cvar("vid_multisample"))
+		my_button("aa_btn", [xpos, ypos], [width, 20], "Disable Antialiasing") ? localcmd("vid_multisample 0; vid_restart\n") : 0;
+	else
+		my_button("aa_btn", [xpos, ypos], [width, 20], "Enable Antialiasing") ? localcmd("vid_multisample 2; vid_restart\n") : 0;
+	ypos += 24;
 	sui_set_align([SUI_ALIGN_END, SUI_ALIGN_END]);
 	my_button("stg_back", [-8, -8], [80, 20], "Back") ? current_menu = MENU_MAIN : 0;
 	
@@ -254,41 +263,35 @@ void() newgame_menu =
 	
 	float xpos = 0;
 	float ypos = 32;
-	sui_text([xpos, ypos], MENU_TEXT_SMALL, "Put Help Here", MENU_TEXT_2, 1, 0);
+	sui_text([xpos, ypos], MENU_TEXT_SMALL, "Choose your difficulty", MENU_TEXT_2, 1, 0);
+	ypos += 16;
+	sui_text([xpos, ypos], MENU_TEXT_SMALL, "Starting a new game erases your", MENU_TEXT_2, 1, 0);
+	ypos += 8;
+	sui_text([xpos, ypos], MENU_TEXT_SMALL, "previous game.", MENU_TEXT_2, 1, 0);
 	ypos += 24;
 	
-	sui_text([xpos, ypos], MENU_TEXT_SMALL, "Text", MENU_TEXT_1, 1, 0);
-	ypos += 16;
-	
-	sui_text([xpos, ypos], MENU_TEXT_SMALL, "More text and", MENU_TEXT_2, 1, 0);
-	ypos += 8;
-	sui_text([xpos, ypos], MENU_TEXT_SMALL, "even more text.", MENU_TEXT_2, 1, 0);
-	ypos += 16 + 4;
-	my_button("ng_easy", [xpos, ypos], [80, 20], "Easy") ? localcmd("skill 0; map test\n") : 0;
+	my_button("ng_easy", [xpos, ypos], [80, 20], "Easy") ? localcmd("removesave 1; skill 0; map test2\n") : 0;
 	ypos += 20 + 16;
 	
-	sui_text([xpos, ypos], MENU_TEXT_SMALL, "Another Subtitle", MENU_TEXT_1, 1, 0);
-	ypos += 16;
+	my_button("ng_norm", [xpos, ypos], [80, 20], "Normal") ? localcmd("removesave 1; skill 1; map test2\n") : 0;
+	ypos += 20 + 16;
 	
-	sui_text([xpos, ypos], MENU_TEXT_SMALL, "Bla bla bla bal.", MENU_TEXT_2, 1, 0);
-	ypos += 8;
-	sui_text([xpos, ypos], MENU_TEXT_SMALL, "blublublubu", MENU_TEXT_2, 1, 0);
-	ypos += 8;
-	sui_text([xpos, ypos], MENU_TEXT_SMALL, "asdasdasd.", MENU_TEXT_2, 1, 0);
-	ypos += 16 + 4;
-	my_button("ng_hard", [xpos, ypos], [80, 20], "Hard") ? localcmd("skill 1; map test\n") : 0;
-	ypos += 20 + 8;
+	my_button("ng_hard", [xpos, ypos], [80, 20], "Hard") ? localcmd("removesave 1; skill 2; map test2\n") : 0;
+	ypos += 20 + 16;
 	
-	sui_set_align([SUI_ALIGN_START, SUI_ALIGN_END]);
-	if (cvar("cl_hud_timer"))
-		my_button("ng_timer_toggle", [8, -8], [150, 20], "Speedrun Timer ON") ? localcmd("cl_hud_timer 0\n") : 0;
-	else
-		my_button("ng_timer_toggle", [8, -8], [150, 20], "Speedrun Timer OFF") ? localcmd("cl_hud_timer 1\n") : 0;
+	my_button("ng_vhard", [xpos, ypos], [80, 20], "Very Hard") ? localcmd("removesave 1; skill 3; map test2\n") : 0;
+	ypos += 20 + 16;
+	
+	my_button("ng_op", [xpos, ypos], [80, 20], "Operator") ? localcmd("removesave 1; skill 4; map test2\n") : 0;
+	ypos += 20 + 16;
+	
 	sui_set_align([SUI_ALIGN_END, SUI_ALIGN_END]);
 	my_button("ng_back", [-8, -8], [80, 20], "Back") ? current_menu = MENU_MAIN : 0;
 
 	sui_pop_frame();	
 };
+
+void() m_close;
 
 void() main_menu =
 {
@@ -304,7 +307,7 @@ void() main_menu =
 	sui_text([0, ypos], MENU_TEXT_SMALL, "Check SETTINGS for Controls!", [1, 1, 1], 1, 0);
 	
 	vector pos = [0, -24];
-	vector size = [120, 100];
+	vector size = [128, 128];
 	sui_set_align([SUI_ALIGN_CENTER, SUI_ALIGN_END]);
 	sui_push_frame(pos, size);
 	
@@ -313,11 +316,35 @@ void() main_menu =
 	
 	sui_set_align([SUI_ALIGN_CENTER, SUI_ALIGN_START]);
 	
-	my_button("mm_start", [0, 8], [size_x - 16, 20], "Start Game") ? current_menu = MENU_NEWGAME : 0;
-	my_button("mm_settings", [0, 8 + 24], [size_x - 16, 20], "Settings") ? current_menu = MENU_SETTINGS : 0;
+	ypos = 8;
+	if (clientstate() == 1)
+	{
+		float file = fopen("game", FILE_READ);
+		if (file)
+		{
+			if (fgets(file) != "")
+			{
+				my_button("mm_continue", [0, ypos], [size_x - 16, 20], "Continue") ? localcmd("map test2\n") : 0;
+				ypos += 24;
+			}
+		}
+		fclose(file);
+		
+		my_button("mm_start", [0, ypos], [size_x - 16, 20], "Start Game") ? current_menu = MENU_NEWGAME : 0;
+		ypos += 24;
+	}
+	else
+	{
+		my_button("mm_resume", [0, ypos], [size_x - 16, 20], "Resume") ? m_close() : 0;
+			ypos += 28;
+	}
+	my_button("mm_settings", [0, ypos], [size_x - 16, 20], "Settings") ? current_menu = MENU_SETTINGS : 0;
 	// my_button("mm_help", [0, 8 + 48], [size_x - 16, 20], "Help") ? current_menu = MENU_HELP : 0;
 	sui_set_align([SUI_ALIGN_CENTER, SUI_ALIGN_END]);
-	my_button("mm_quit", [0, -8], [size_x - 16, 20], "Quit") ? localcmd("quit\n") : 0;
+	if (clientstate() == 1)
+		my_button("mm_quit", [0, -8], [size_x - 16, 20], "Quit") ? localcmd("quit\n") : 0;
+	else
+		my_button("mm_mm", [0, -8], [size_x - 16, 20], "Save & Quit") ? localcmd("cmd quit\n") : 0;
 	sui_pop_frame();
 	
 	if (was_in_options)
@@ -330,8 +357,7 @@ void() main_menu =
 void(vector size) root_menu =
 {
 	sui_set_align([SUI_ALIGN_CENTER, SUI_ALIGN_CENTER]);
-	sui_fill([0, 0], size, '0 0 0', 0.75, 0);
-	sui_fill([0, 0], size, '0.2 0.1 0.05', 0.4, 0);
+	sui_fill([0, 0], size, '0 0 0', 0.85, 0);
 	switch (current_menu)
 	{
 		case MENU_MAIN: main_menu(); break;

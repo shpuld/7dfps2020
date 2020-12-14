@@ -11,6 +11,9 @@ void() m_init =
 	setcursormode(TRUE,"gfx/xhair", [16, 16], cvar("vid_conautoscale"));
 	current_menu = MENU_MAIN;
 	
+	cvar_set("musicvolume", ftos(cvar("musicvolumegame")));
+	localcmd("media_add sound/menu_song.oga\n");
+	
 	// if (cvar_string("mapname") == "")
 	//	localcmd("map menu\n");
 };

@@ -1,5 +1,3 @@
 #EXTM3U
-#EXTINF:0,action_song.oga
-sound/action_song.oga
-#EXTINF:0,action_song
-sound/action_song
+#EXTINF:0,menu_song.oga
+sound/menu_song.oga

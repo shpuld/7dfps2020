@@ -70,8 +70,8 @@ varying vec3 normal;
 
 void main ()
 {
-	light.rgba = vec4(e_light_ambient, 1.0f) * 3.5f;
-	light.rgb = max(vec3(0.15f), light.rgb);
+	light.rgba = vec4(e_light_ambient, 1.0f) * 3.8f;
+	light.rgb = max(vec3(0.15f), light.rgb) * min(vec3(1.2f), (w_user[0].xyz * 1.8f));
 
 #ifdef NONORMALS
 	vec3 n, w;
